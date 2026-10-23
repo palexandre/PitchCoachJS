@@ -41,18 +41,20 @@ export class Renderer {
   /**
    * @param {HTMLCanvasElement} canvas
    * @param {object} [opts]
-   * @param {number} [opts.pixelsPerSecond=170]
+   * @param {number|'auto'} [opts.pixelsPerSecond='auto'] horizontal zoom; 'auto' adapts to the width
    * @param {number} [opts.playheadPosition=0.3] fraction of the width
    * @param {'english'|'solfege'} [opts.notation='solfege'] grid labels
    * @param {boolean} [opts.hud=true] score & combo
    * @param {boolean} [opts.lyricsLine=true] karaoke phrase at the bottom
+   * @param {boolean} [opts.results=true] draw the final results over the canvas
+   * @param {{top?: number, bottom?: number}} [opts.insets] px reserved for your own overlays (toolbars, safe areas)
    * @param {object} [opts.theme] overrides DEFAULT_THEME
    * @param {object} [opts.labels] overrides DEFAULT_LABELS
    */
   constructor(canvas, opts = {}) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
-    this.options = { pixelsPerSecond: 170, playheadPosition: 0.3, notation: 'solfege', hud: true, lyricsLine: true, ...opts };
+    this.options = { pixelsPerSecond: 'auto', playheadPosition: 0.3, notation: 'solfege', hud: true, lyricsLine: true, results: true, insets: {}, ...opts };
     this.theme = { ...DEFAULT_THEME, ...opts.theme };
     this.labels = { ...DEFAULT_LABELS, ...opts.labels };
     this.particles = [];
@@ -90,18 +92,26 @@ export class Renderer {
     this.canvas.width = Math.round(this.width * dpr);
     this.canvas.height = Math.round(this.height * dpr);
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.onResize?.();
   }
 
   get layout() {
-    const h = this.height;
+    const insetTop = this.options.insets?.top ?? 0;
+    const h = this.height - (this.options.insets?.bottom ?? 0);
     const bottom = this.options.lyricsLine ? 92 : 50;
     return {
-      top: this.options.hud ? 58 : 24,
+      top: insetTop + (this.options.hud ? 58 : 24),
       bottom: h - bottom,
       lyricY: h - 62,
       progressY: h - 20,
       playheadX: Math.round(this.width * this.options.playheadPosition),
     };
+  }
+
+  /** Pixels per second of song; 'auto' shows ~5 s on phones and ~7 s on wide screens. */
+  get pps() {
+    const v = this.options.pixelsPerSecond;
+    return v === 'auto' ? Math.max(95, Math.min(180, this.width / 5.5)) : v;
   }
 
   /** Visible pitch range, at least 1.5 octaves so small songs aren't stretched. */
@@ -125,7 +135,7 @@ export class Renderer {
   }
 
   xFor(t, time) {
-    return this.layout.playheadX + (t - time) * this.options.pixelsPerSecond;
+    return this.layout.playheadX + (t - time) * this.pps;
   }
 
   /** Time under an x coordinate of the progress bar, or null. */
@@ -229,7 +239,7 @@ export class Renderer {
     if (this.options.hud) this._drawHud(f);
     if (f.time < 0 && f.state === 'playing') this._drawCountdown(f.time);
     if (f.state === 'paused') this._drawCenter(this.labels.paused);
-    if (f.state === 'ended' && f.result) this._drawResults(f.result);
+    if (f.state === 'ended' && f.result && this.options.results) this._drawResults(f.result);
   }
 
   _font(size, weight = 800) {
@@ -267,8 +277,8 @@ export class Renderer {
     const { ctx, theme, song } = this;
     const time = f.time;
     const bh = this._barHeight();
-    const t0 = time - this.layout.playheadX / this.options.pixelsPerSecond - 0.5;
-    const t1 = time + (this.width - this.layout.playheadX) / this.options.pixelsPerSecond + 0.5;
+    const t0 = time - this.layout.playheadX / this.pps - 0.5;
+    const t1 = time + (this.width - this.layout.playheadX) / this.pps + 0.5;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.font = this._font(Math.max(12, Math.min(17, bh + 2)), 700);
@@ -338,7 +348,7 @@ export class Renderer {
     if (f.state === 'playing' && f.time >= 0) {
       this.trail.push({ t: f.time, midi: f.pitch?.midi ?? null, hit: !!f.pitch?.hit });
     }
-    const oldest = f.time - px / this.options.pixelsPerSecond;
+    const oldest = f.time - px / this.pps;
     while (this.trail.length && this.trail[0].t < oldest) this.trail.shift();
 
     ctx.lineWidth = 3;
@@ -511,6 +521,8 @@ export class Renderer {
     const { ctx, theme } = this;
     const s = f.scorer;
     if (!s) return;
+    ctx.save();
+    ctx.translate(0, this.options.insets?.top ?? 0);
     ctx.textBaseline = 'top';
     ctx.textAlign = 'left';
     ctx.fillStyle = theme.text;
@@ -544,6 +556,7 @@ export class Renderer {
       ctx.textAlign = 'left';
       ctx.fillText('★'.repeat(Math.min(5, Math.floor(s.streak / step))), x + 128, y - 3);
     }
+    ctx.restore();
   }
 
   _drawCountdown(time) {

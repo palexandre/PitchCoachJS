@@ -36,6 +36,7 @@ export class Entona extends Emitter {
     super();
     this.options = { ...DEFAULTS, ...opts };
     this.renderer = canvas ? new Renderer(canvas, opts) : null;
+    if (this.renderer) this.renderer.onResize = () => this.state !== 'playing' && this._drawFrame(0);
     this.audioContext = opts.audioContext ?? null;
     this.song = null;
     this.scorer = null;
@@ -175,13 +176,18 @@ export class Entona extends Emitter {
     if (this.loopRange && (this.currentTime < this.loopRange[0] || this.currentTime > this.loopRange[1])) this.seek(this.loopRange[0]);
   }
 
-  /** Changes options on the fly: difficulty, tolerance, transpose, speed, volumes, latency… */
+  /** Changes options on the fly: difficulty, tolerance, transpose, speed, volumes, latency, notation, insets… */
   set(opts) {
     const speedChanged = 'speed' in opts && opts.speed !== this.options.speed;
     const now = this.currentTime;
     Object.assign(this.options, opts);
     this.scorer?.setOptions(this._scorerOptions());
-    if (this.renderer && 'transpose' in opts) this.renderer.transpose = this.options.transpose;
+    if (this.renderer) {
+      if ('transpose' in opts) this.renderer.transpose = this.options.transpose;
+      for (const k of ['notation', 'pixelsPerSecond', 'playheadPosition', 'insets', 'hud', 'lyricsLine', 'results']) {
+        if (k in opts) this.renderer.options[k] = opts[k];
+      }
+    }
     this._applyVolumes();
     if (this.state === 'playing' && (speedChanged || 'transpose' in opts)) this._seekClock(now);
     if (this.state !== 'playing') this._drawFrame(0);

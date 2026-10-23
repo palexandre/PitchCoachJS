@@ -201,7 +201,7 @@ export class Scorer extends Emitter {
       score: this.score,
       percent,
       grade,
-      stars: Math.round(percent * 5 * 2) / 2, // 0..5 in half stars
+      stars: Math.min(5, Math.round((percent / 0.9) * 5 * 2) / 2), // half stars; 90% (an S) is 5
       maxCombo: this.maxCombo,
       counts,
     };

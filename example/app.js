@@ -1,138 +1,620 @@
 import { Entona, loadSong, midiToName } from '../src/index.js';
+import { readJSON, writeJSON, listImported, saveImported, deleteImported } from './store.js';
 
-const $ = (id) => document.getElementById(id);
-const canvas = $('stage');
+const $ = (sel) => document.querySelector(sel);
 
-const game = new Entona(canvas, { notation: 'solfege' });
+const BUILTIN = [
+  { id: 'songs/martinillo.mid', artist: 'Tradicional' },
+  { id: 'songs/estrellita.txt', artist: 'Tradicional' },
+  { id: 'songs/escala.json', artist: 'Calentamiento' },
+];
 
-let currentSource = null; // File or URL, to reload with another melody track
-let lastInput = 'mic';
+const DEFAULT_SETTINGS = {
+  difficulty: 'normal',
+  speed: 1,
+  octaveTolerant: true,
+  guideVolume: 0.35,
+  accompanimentVolume: 0.18,
+  latency: 0.06,
+  notation: 'solfege',
+};
+const DIFFICULTY_TEXT = {
+  facil: ['Fácil', 'Margen de ±1 semitono'],
+  normal: ['Normal', 'Margen de ±½ semitono'],
+  dificil: ['Difícil', 'Afinación fina, ±30 cents'],
+};
+const FORMAT_TEXT = { midi: 'MIDI', ultrastar: 'UltraStar', json: 'JSON' };
 
-// ---- loading ---------------------------------------------------------------
+const settings = readJSON('settings', DEFAULT_SETTINGS);
+const perSong = readJSON('per-song', {}); // { id: { transpose, melody } }
+const best = readJSON('best', {});        // { id: { score, grade, stars } }
 
-async function load(source, opts = {}) {
-  try {
-    const song = await loadSong(source, opts);
-    currentSource = source;
-    game.load(song);
-    showTracks(song);
-    setPlaying(false);
-    $('events').innerHTML = '';
-  } catch (err) {
-    alert(`No se pudo cargar la canción:\n${err.message}`);
-  }
+/** @type {{id, name, artist, source, imported, song, error}[]} */
+let library = [];
+let current = null;  // library entry being played or viewed
+let mode = 'mic';    // 'mic' | 'demo'
+
+const game = new Entona($('#stage'), { ...settings, hud: false, results: false, leadIn: 3 });
+
+// =========================================================================
+// Library
+// =========================================================================
+
+async function initLibrary() {
+  const builtins = await Promise.all(BUILTIN.map(async (b) => {
+    const entry = { ...b, source: b.id, imported: false };
+    await parseEntry(entry);
+    return entry;
+  }));
+  const imported = await listImported();
+  const importedEntries = await Promise.all(imported.map(async (r) => {
+    const entry = { id: r.id, name: r.name, source: r.bytes, imported: true, addedAt: r.addedAt };
+    await parseEntry(entry);
+    return entry;
+  }));
+  library = [...importedEntries.filter((e) => e.song), ...builtins];
+  renderLibrary();
 }
 
-function showTracks(song) {
-  const cands = song.meta.candidates ?? [];
-  $('track-field').hidden = cands.length < 2;
-  $('track-select').innerHTML = cands
-    .map((c) => `<option value="${c.id}" ${c.id === song.meta.melody ? 'selected' : ''}>
-      ${c.name} · canal ${c.channel + 1} · ${c.noteCount} notas${c.lyricMatches ? ' · con letra' : ''}</option>`)
+async function parseEntry(entry) {
+  try {
+    entry.song = await loadSong(entry.source, { name: entry.name, melody: perSong[entry.id]?.melody });
+    entry.error = null;
+  } catch (err) {
+    entry.song = null;
+    entry.error = err.message;
+  }
+  return entry;
+}
+
+function renderLibrary() {
+  const el = $('#library');
+  el.innerHTML = '';
+  library.forEach((entry, i) => {
+    if (!entry.song) return;
+    const s = entry.song;
+    const b = best[entry.id];
+    const btn = document.createElement('button');
+    btn.className = 'song-card';
+    btn.setAttribute('role', 'listitem');
+    btn.style.animationDelay = `${i * 40}ms`;
+    btn.innerHTML = `
+      ${coverHTML(s.title)}
+      <span class="song-info">
+        <span class="song-title"></span>
+        <span class="song-meta"></span>
+      </span>
+      <span class="song-best">${b
+        ? `<span class="mini-grade">${b.grade}</span><span class="mini-stars">${starsText(b.stars)}</span>`
+        : entry.imported && Date.now() - (entry.addedAt ?? 0) < 864e5 ? '<span class="tag-new">Nueva</span>' : ''}
+      </span>`;
+    btn.querySelector('.song-title').textContent = s.title;
+    btn.querySelector('.song-meta').textContent = [entry.artist || s.artist, formatDuration(s), FORMAT_TEXT[s.meta.format]].filter(Boolean).join(' · ');
+    btn.addEventListener('click', () => openSongSheet(entry));
+    el.append(btn);
+  });
+}
+
+function coverHTML(title) {
+  let h = 0;
+  for (const ch of title) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const hue = h % 360;
+  return `<span class="cover" aria-hidden="true" style="--c1: hsl(${hue} 65% 42%); --c2: hsl(${(hue + 150) % 360} 80% 62%)"></span>`;
+}
+
+function starsText(stars) {
+  const full = Math.round(stars);
+  return '★'.repeat(full) + `<span class="off">${'★'.repeat(5 - full)}</span>`;
+}
+
+function formatDuration(song) {
+  const s = Math.round(song.duration);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+function noteName(midi) {
+  return midiToName(midi, { notation: settings.notation });
+}
+
+// ---- importing ----------------------------------------------------------------
+
+async function importFile(file) {
+  if (!file) return;
+  const bytes = await file.arrayBuffer();
+  const entry = { id: `imp-${Date.now()}`, name: file.name, source: bytes, imported: true, addedAt: Date.now() };
+  await parseEntry(entry);
+  if (!entry.song) return toast(`No se pudo leer «${file.name}»: ${entry.error}`, true);
+  if (!entry.song.notes.length) return toast('El archivo no tiene notas para cantar', true);
+  await saveImported({ id: entry.id, name: file.name, bytes, addedAt: entry.addedAt });
+  library.unshift(entry);
+  renderLibrary();
+  if (entry.song.meta.format === 'midi' && !entry.song.meta.hasLyrics) toast('Este MIDI no trae letra: podrás cantarlo con vocales');
+  openSongSheet(entry);
+}
+
+$('#file').addEventListener('change', (e) => {
+  importFile(e.target.files[0]);
+  e.target.value = '';
+});
+
+let dragDepth = 0;
+document.addEventListener('dragenter', (e) => {
+  if (!isHome() || !e.dataTransfer?.types.includes('Files')) return;
+  dragDepth++;
+  document.body.classList.add('dragging');
+});
+document.addEventListener('dragleave', () => {
+  if (--dragDepth <= 0) document.body.classList.remove('dragging');
+});
+document.addEventListener('dragover', (e) => e.preventDefault());
+document.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dragDepth = 0;
+  document.body.classList.remove('dragging');
+  if (isHome()) importFile(e.dataTransfer.files[0]);
+});
+
+// =========================================================================
+// Song sheet
+// =========================================================================
+
+function openSongSheet(entry) {
+  current = entry;
+  const s = entry.song;
+  $('#sheet-cover').outerHTML = coverHTML(s.title).replace('class="cover"', 'class="cover cover-lg" id="sheet-cover"');
+  $('#sheet-title').textContent = s.title;
+  $('#sheet-artist').textContent = entry.artist || s.artist || FORMAT_TEXT[s.meta.format];
+  $('#sheet-stats').innerHTML = `
+    <div class="stat"><b>${formatDuration(s)}</b><span>Duración</span></div>
+    <div class="stat"><b>${s.notes.length}</b><span>Notas</span></div>
+    <div class="stat"><b>${noteName(s.lowest + transposeOf(entry))}–${noteName(s.highest + transposeOf(entry))}</b><span>Tesitura</span></div>`;
+  const b = best[entry.id];
+  $('#sheet-best').innerHTML = b
+    ? `<span>Tu récord</span><span class="mini-stars">${starsText(b.stars)}</span><span>${b.grade} · ${b.score.toLocaleString('es')}</span>`
+    : '';
+  $('#delete-song').hidden = !entry.imported;
+  renderChips();
+  openDialog($('#song-sheet'));
+}
+
+function renderChips() {
+  const chips = [DIFFICULTY_TEXT[settings.difficulty][0]];
+  if (settings.speed !== 1) chips.push(`${Math.round(settings.speed * 100)}%`);
+  const t = transposeOf(current);
+  if (t) chips.push(`Tono ${t > 0 ? '+' : ''}${t}`);
+  if (!settings.guideVolume) chips.push('Sin guía');
+  if (!settings.octaveTolerant) chips.push('Octava exacta');
+  $('#sheet-chips').innerHTML = chips.map((c) => `<span class="chip">${c}</span>`).join('');
+}
+
+function transposeOf(entry) {
+  return entry ? perSong[entry.id]?.transpose ?? 0 : 0;
+}
+
+$('#sheet-settings').addEventListener('click', () => openSettings());
+$('#sing-btn').addEventListener('click', () => startGame('mic'));
+$('#demo-btn').addEventListener('click', () => startGame('demo'));
+$('#delete-song').addEventListener('click', async () => {
+  if (!current?.imported) return;
+  if (!confirm(`¿Quitar «${current.song.title}» de tu biblioteca?`)) return;
+  await deleteImported(current.id);
+  library = library.filter((e) => e !== current);
+  delete best[current.id];
+  writeJSON('best', best);
+  closeDialog($('#song-sheet'));
+  renderLibrary();
+  toast('Canción eliminada');
+});
+
+// =========================================================================
+// Settings
+// =========================================================================
+
+function openSettings() {
+  syncSettingsUI();
+  openDialog($('#settings'));
+}
+
+function syncSettingsUI() {
+  document.querySelectorAll('.segmented').forEach((seg) => {
+    const key = seg.dataset.setting;
+    seg.querySelectorAll('button').forEach((b) => b.setAttribute('aria-checked', String(String(settings[key]) === b.dataset.value)));
+  });
+  $('#difficulty-hint').textContent = DIFFICULTY_TEXT[settings.difficulty][1];
+  const t = transposeOf(current);
+  $('#transpose').value = t > 0 ? `+${t}` : String(t);
+  $('#tr-down').disabled = !current;
+  $('#tr-up').disabled = !current;
+  $('#octave').checked = settings.octaveTolerant;
+  $('#guide').value = settings.guideVolume;
+  $('#backing').value = settings.accompanimentVolume;
+  $('#latency').value = settings.latency;
+  $('#latency-value').textContent = `${Math.round(settings.latency * 1000)} ms`;
+
+  const cands = current?.song?.meta.candidates ?? [];
+  $('#track-setting').hidden = isPlaying() || cands.length < 2;
+  $('#track-select').innerHTML = cands
+    .map((c) => `<option value="${c.id}" ${c.id === current.song.meta.melody ? 'selected' : ''}>${escapeHTML(c.name)} · ${c.noteCount} notas${c.lyricMatches ? ' · letra' : ''}</option>`)
     .join('');
 }
 
-$('song-select').addEventListener('change', (e) => load(e.target.value));
-$('file').addEventListener('change', (e) => e.target.files[0] && load(e.target.files[0]));
-$('track-select').addEventListener('change', (e) => load(currentSource, { melody: e.target.value }));
-
-// drag & drop on the stage
-const stage = canvas.parentElement;
-stage.addEventListener('dragover', (e) => {
-  e.preventDefault();
-  stage.classList.add('dragging');
-});
-stage.addEventListener('dragleave', () => stage.classList.remove('dragging'));
-stage.addEventListener('drop', (e) => {
-  e.preventDefault();
-  stage.classList.remove('dragging');
-  const file = e.dataTransfer.files[0];
-  if (file) load(file);
-});
-
-// ---- transport ---------------------------------------------------------------
-
-async function play(input) {
-  lastInput = input;
-  try {
-    await game.start({ input });
-    setPlaying(true);
-  } catch (err) {
-    alert(err.name === 'NotAllowedError' ? 'Necesito permiso para usar el micrófono 🎤' : err.message);
-  }
+function updateSetting(patch) {
+  Object.assign(settings, patch);
+  writeJSON('settings', settings);
+  game.set(patch);
+  syncSettingsUI();
+  if (current) renderChips();
 }
 
-function setPlaying(on) {
-  $('pause').disabled = !on;
-  $('restart').disabled = !on;
-  $('pause').textContent = '⏸ Pausa';
-}
-
-$('sing').addEventListener('click', () => play('mic'));
-$('demo').addEventListener('click', () => play('demo'));
-$('restart').addEventListener('click', () => play(lastInput));
-$('pause').addEventListener('click', () => {
-  game.togglePause();
-  $('pause').textContent = game.state === 'paused' ? '▶ Seguir' : '⏸ Pausa';
+document.querySelectorAll('.segmented').forEach((seg) => {
+  seg.addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    const raw = btn.dataset.value;
+    updateSetting({ [seg.dataset.setting]: isNaN(raw) ? raw : Number(raw) });
+  });
 });
-document.addEventListener('keydown', (e) => {
-  if (e.code === 'Space' && e.target === document.body) {
-    e.preventDefault();
-    game.togglePause();
-  }
-});
+$('#octave').addEventListener('change', (e) => updateSetting({ octaveTolerant: e.target.checked }));
+$('#guide').addEventListener('input', (e) => updateSetting({ guideVolume: Number(e.target.value) }));
+$('#backing').addEventListener('input', (e) => updateSetting({ accompanimentVolume: Number(e.target.value) }));
+$('#latency').addEventListener('input', (e) => updateSetting({ latency: Number(e.target.value) }));
 
-// ---- settings ----------------------------------------------------------------
-
-$('difficulty').addEventListener('change', (e) => game.set({ difficulty: e.target.value }));
-$('speed').addEventListener('change', (e) => game.set({ speed: Number(e.target.value) }));
-$('guide').addEventListener('input', (e) => game.set({ guideVolume: Number(e.target.value) }));
-$('backing').addEventListener('input', (e) => game.set({ accompanimentVolume: Number(e.target.value) }));
-$('octave').addEventListener('change', (e) => game.set({ octaveTolerant: e.target.checked }));
-
-const transpose = (d) => {
-  const v = Math.max(-12, Math.min(12, game.options.transpose + d));
+function stepTranspose(d) {
+  if (!current) return;
+  const v = Math.max(-12, Math.min(12, transposeOf(current) + d));
+  perSong[current.id] = { ...perSong[current.id], transpose: v };
+  writeJSON('per-song', perSong);
   game.set({ transpose: v });
-  $('transpose').value = v > 0 ? `+${v}` : v;
-};
-$('tr-down').addEventListener('click', () => transpose(-1));
-$('tr-up').addEventListener('click', () => transpose(1));
+  syncSettingsUI();
+  renderChips();
+  if ($('#song-sheet').open) openSongSheetStats();
+}
+function openSongSheetStats() {
+  const s = current.song;
+  const t = transposeOf(current);
+  $('#sheet-stats .stat:last-child b').textContent = `${noteName(s.lowest + t)}–${noteName(s.highest + t)}`;
+}
+$('#tr-down').addEventListener('click', () => stepTranspose(-1));
+$('#tr-up').addEventListener('click', () => stepTranspose(1));
 
-$('loop').addEventListener('change', (e) => {
-  if (!e.target.checked || !game.song) return game.setLoop(null);
-  const t = Math.max(0, game.currentTime);
-  const line = game.song.lines.find((l) => t < l.end) ?? game.song.lines.at(-1);
-  game.setLoop(line.start - 0.8, line.end + 0.4);
+$('#track-select').addEventListener('change', async (e) => {
+  perSong[current.id] = { ...perSong[current.id], melody: e.target.value };
+  writeJSON('per-song', perSong);
+  await parseEntry(current);
+  openSongSheetStats();
+  toast('Pista de la voz cambiada');
 });
 
-// ---- game events -------------------------------------------------------------
-
-const RATING_TEXT = { perfect: '★ Perfecto', great: 'Genial', good: 'Bien', miss: 'Fallo' };
-
-game.on('note', ({ note, rating, accuracy, points }) => {
-  const li = document.createElement('li');
-  li.className = rating;
-  li.innerHTML = `<b>${note.lyric || '♪'}</b> <span>${midiToName(note.midi + game.options.transpose, { notation: 'solfege' })}</span>
-    <em>${RATING_TEXT[rating]} · ${Math.round(accuracy * 100)}%</em> <strong>+${points}</strong>`;
-  $('events').prepend(li);
-  while ($('events').children.length > 8) $('events').lastChild.remove();
+$('#open-settings-home').addEventListener('click', () => {
+  current = null;
+  openSettings();
 });
 
-game.on('frame', ({ pitch }) => {
-  const el = $('live-note');
-  if (pitch?.freq) {
-    el.textContent = `${pitch.name} ${pitch.cents > 0 ? '+' : ''}${pitch.cents}¢`;
-    el.classList.toggle('hit', pitch.hit);
-  } else {
-    el.textContent = '–';
-    el.classList.remove('hit');
+// =========================================================================
+// Game
+// =========================================================================
+
+function isHome() {
+  return $('#home').classList.contains('is-active');
+}
+function isPlaying() {
+  return $('#play').classList.contains('is-active');
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('is-active', s.id === id));
+  document.body.classList.toggle('playing', id === 'play');
+}
+
+async function startGame(m) {
+  if (!current?.song) return;
+  mode = m;
+  const btn = m === 'mic' ? $('#sing-btn') : $('#demo-btn');
+  btn.disabled = true;
+  const label = btn.querySelector('span') ?? btn;
+  const prevLabel = label.textContent;
+  if (m === 'mic') label.textContent = 'Activando micrófono…';
+
+  try {
+    closeAllDialogs();
+    showScreen('play');
+    if (!history.state?.play) history.pushState({ play: true }, '');
+    layoutHud();
+    game.set({ ...settings, transpose: transposeOf(current) });
+    game.load(current.song);
+    $('#hud-title').textContent = current.song.title;
+    $('#mode-badge').hidden = m !== 'demo';
+    resetHud();
+    await game.start({ input: m });
+    keepAwake(true);
+  } catch (err) {
+    exitGame({ fromHistory: false });
+    toast(err.name === 'NotAllowedError'
+      ? 'Necesito permiso para usar el micrófono. Actívalo en los ajustes del navegador.'
+      : err.name === 'NotFoundError' ? 'No encuentro ningún micrófono' : err.message, true);
+  } finally {
+    btn.disabled = false;
+    label.textContent = prevLabel;
+  }
+}
+
+function exitGame({ fromHistory = false } = {}) {
+  game.stop();
+  game.setLoop(null);
+  keepAwake(false);
+  closeAllDialogs();
+  showScreen('home');
+  renderLibrary();
+  if (!fromHistory && history.state?.play) history.back();
+}
+
+function pauseGame() {
+  if (game.state !== 'playing') return;
+  game.pause();
+  $('#loop-btn').textContent = game.loopRange ? 'Dejar de repetir la frase' : 'Repetir esta frase';
+  $('#loop-btn').classList.toggle('active', !!game.loopRange);
+  openDialog($('#pause-menu'));
+}
+
+function resumeGame() {
+  closeDialog($('#pause-menu'));
+  game.resume();
+}
+
+$('#pause-btn').addEventListener('click', pauseGame);
+
+$('#pause-menu').addEventListener('click', (e) => {
+  const action = e.target.closest('[data-action]')?.dataset.action;
+  if (action === 'resume') resumeGame();
+  if (action === 'restart') {
+    closeDialog($('#pause-menu'));
+    resetHud();
+    game.start({ input: mode });
+  }
+  if (action === 'loop') {
+    if (game.loopRange) game.setLoop(null);
+    else {
+      const t = Math.max(0, game.currentTime);
+      const line = current.song.lines.find((l) => t < l.end) ?? current.song.lines.at(-1);
+      game.setLoop(line.start - 1, line.end + 0.4);
+    }
+    resumeGame();
+    toast(game.loopRange ? 'Repitiendo la frase. Pausa para salir del bucle.' : 'Bucle desactivado');
+  }
+  if (action === 'settings') openSettings();
+  if (action === 'exit') exitGame();
+});
+// Esc on the pause menu resumes
+$('#pause-menu').addEventListener('cancel', (e) => {
+  e.preventDefault();
+  resumeGame();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (!isPlaying() || document.querySelector('dialog[open]')) return;
+  if (e.code === 'Space' || e.code === 'Escape' || e.code === 'KeyP') {
+    e.preventDefault();
+    pauseGame();
   }
 });
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && game.state === 'playing') pauseGame();
+});
+
+window.addEventListener('popstate', () => {
+  if (isPlaying()) exitGame({ fromHistory: true });
+});
+
+// ---- HUD ------------------------------------------------------------------------
+
+let shownScore = 0;
+
+function resetHud() {
+  shownScore = 0;
+  $('#score').textContent = '0';
+  $('#combo').textContent = '';
+  $('#combo').className = 'combo';
+  $('#streak').classList.remove('on');
+}
+
+game.on('score', ({ score, combo, multiplier }) => {
+  animateScore(score);
+  const el = $('#combo');
+  el.textContent = combo >= 2 ? `Combo ${combo}${multiplier > 1 ? ` · ×${multiplier}` : ''}` : '';
+  el.className = `combo x${multiplier}`;
+});
+
+function animateScore(target) {
+  const from = shownScore;
+  shownScore = target;
+  const el = $('#score');
+  el.classList.remove('bump');
+  void el.offsetWidth;
+  el.classList.add('bump');
+  const t0 = performance.now();
+  const step = (now) => {
+    const k = Math.min(1, (now - t0) / 300);
+    el.textContent = Math.round(from + (target - from) * k).toLocaleString('es');
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+let lastLive = '';
+game.on('frame', ({ pitch }) => {
+  const live = $('#live-note');
+  const text = pitch?.freq ? `${noteName(pitch.midi)} ${pitch.cents > 0 ? '+' : ''}${pitch.cents ?? 0}¢` : 'Canta…';
+  if (text !== lastLive) $('#live-text').textContent = lastLive = text;
+  live.classList.toggle('voiced', !!pitch?.freq);
+  live.classList.toggle('hit', !!pitch?.hit);
+
+  const s = game.scorer;
+  const step = s.options.streakStep;
+  $('#streak').classList.toggle('on', s.streak > 0.2);
+  $('#streak i').style.width = `${((s.streak % step) / step) * 100}%`;
+});
+
+// ---- Results ----------------------------------------------------------------------
 
 game.on('end', (r) => {
-  setPlaying(false);
-  $('restart').disabled = false;
-  console.log('Resultado', r);
+  keepAwake(false);
+  setTimeout(() => showResults(r), 900);
 });
 
-load($('song-select').value);
+function showResults(r) {
+  const prev = best[current.id];
+  const isRecord = mode === 'mic' && r.score > 0 && (!prev || r.score > prev.score);
+  if (isRecord) {
+    best[current.id] = { score: r.score, grade: r.grade, stars: r.stars };
+    writeJSON('best', best);
+  }
+  $('#results-song').textContent = current.song.title + (mode === 'demo' ? ' · demo' : '');
+  $('#results-title').textContent = r.percent >= 0.8 ? '¡Qué bien cantas!' : r.percent >= 0.5 ? '¡Canción completada!' : '¡Sigue practicando!';
+  $('#result-stars').innerHTML = Array.from({ length: 5 }, (_, i) => {
+    const fill = Math.max(0, Math.min(1, r.stars - i));
+    return `<svg viewBox="0 0 24 24" class="star" style="animation-delay:${200 + i * 120}ms">
+      <defs><linearGradient id="sg${i}"><stop offset="${fill * 100}%" stop-color="#ffcf4a"/><stop offset="${fill * 100}%" stop-color="rgba(255,255,255,0.18)"/></linearGradient></defs>
+      <path fill="url(#sg${i})" d="M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4L2.8 9.3l6.4-.8z"/></svg>`;
+  }).join('');
+  $('#result-stars').setAttribute('aria-label', `${r.stars} de 5 estrellas`);
+  const grade = $('#grade');
+  grade.textContent = r.grade;
+  grade.className = `grade ${r.grade}`;
+  $('#record').hidden = !isRecord || !prev;
+  $('#breakdown').innerHTML = `
+    <div><dt>Afinación</dt><dd>${Math.round(r.percent * 100)}%</dd></div>
+    <div><dt>Perfectas</dt><dd>${r.counts.perfect}</dd></div>
+    <div><dt>Combo máx.</dt><dd>${r.maxCombo}</dd></div>`;
+  openDialog($('#results'));
+  countUp($('#result-score'), r.score, 1100);
+}
+
+function countUp(el, target, ms) {
+  const t0 = performance.now();
+  const step = (now) => {
+    const k = Math.min(1, (now - t0) / ms);
+    el.textContent = Math.round(target * (1 - (1 - k) ** 3)).toLocaleString('es');
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+$('#results').addEventListener('click', (e) => {
+  const action = e.target.closest('[data-action]')?.dataset.action;
+  if (action === 'again') {
+    closeDialog($('#results'));
+    resetHud();
+    game.start({ input: mode });
+    keepAwake(true);
+  }
+  if (action === 'library') exitGame();
+});
+$('#results').addEventListener('cancel', (e) => {
+  e.preventDefault();
+  exitGame();
+});
+
+// =========================================================================
+// Layout helpers
+// =========================================================================
+
+function layoutHud() {
+  const probe = getComputedStyle($('#safe-probe'));
+  const hudBottom = $('#hud').getBoundingClientRect().bottom || 80;
+  game.set({
+    insets: { top: Math.round(hudBottom - 30), bottom: parseFloat(probe.paddingBottom) || 0 },
+    playheadPosition: innerWidth < 600 ? 0.24 : 0.3,
+  });
+}
+addEventListener('resize', () => isPlaying() && layoutHud());
+
+let wakeLock = null;
+async function keepAwake(on) {
+  try {
+    if (on && !wakeLock && 'wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => (wakeLock = null));
+    } else if (!on && wakeLock) {
+      await wakeLock.release();
+      wakeLock = null;
+    }
+  } catch { /* not allowed, fine */ }
+}
+
+// ---- dialogs ----------------------------------------------------------------------
+
+function openDialog(d) {
+  d.classList.remove('closing');
+  if (!d.open) d.showModal();
+}
+
+function closeDialog(d) {
+  if (!d.open || d.classList.contains('closing')) return;
+  d.classList.add('closing');
+  const done = () => {
+    d.classList.remove('closing');
+    d.close();
+  };
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) done();
+  else d.addEventListener('animationend', done, { once: true });
+}
+
+function closeAllDialogs() {
+  document.querySelectorAll('dialog[open]').forEach((d) => {
+    d.classList.remove('closing');
+    d.close();
+  });
+}
+
+document.querySelectorAll('dialog.sheet').forEach((d) => {
+  // tap on the backdrop closes sheets
+  d.addEventListener('click', (e) => {
+    if (e.target === d) closeDialog(d);
+  });
+  d.addEventListener('cancel', (e) => {
+    e.preventDefault();
+    closeDialog(d);
+  });
+  d.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => closeDialog(d)));
+  enableSwipeToClose(d);
+});
+
+function enableSwipeToClose(d) {
+  let startY = null;
+  let dy = 0;
+  d.addEventListener('touchstart', (e) => {
+    if (d.scrollTop > 0 || innerWidth >= 720) return;
+    startY = e.touches[0].clientY;
+    dy = 0;
+  }, { passive: true });
+  d.addEventListener('touchmove', (e) => {
+    if (startY == null) return;
+    dy = Math.max(0, e.touches[0].clientY - startY);
+    d.style.transform = `translateY(${dy}px)`;
+  }, { passive: true });
+  d.addEventListener('touchend', () => {
+    if (startY == null) return;
+    d.style.transform = '';
+    if (dy > 90) closeDialog(d);
+    startY = null;
+  });
+}
+
+// ---- toast ------------------------------------------------------------------------
+
+let toastTimer = 0;
+function toast(msg, error = false) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.toggle('error', error);
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), error ? 5000 : 2600);
+}
+
+function escapeHTML(s) {
+  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+initLibrary();

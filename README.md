@@ -15,10 +15,15 @@ npm run dev          # sirve el repo en http://localhost:5173
 
 (Cualquier servidor estático vale; los módulos ES no funcionan abriendo el HTML con `file://`.)
 
-- **🎤 Cantar** pide el micrófono. Usa auriculares para que no escuche la guía.
-- **▶ Demo** se canta sola: envía la melodía guía al detector, útil para ver cómo funciona.
-- Arrastra un `.mid`, `.kar`, `.txt` (UltraStar) o `.json` sobre el escenario para cargarlo.
-- Clic en la barra de progreso para saltar; espacio para pausar.
+La página de ejemplo es una app completa y responsive (móvil primero):
+
+- **Biblioteca**: canciones de muestra + las que importes (se guardan en el navegador), con tu mejor nota y estrellas.
+- **Ficha de canción** (hoja inferior en móvil): duración, notas, tesitura, récord y un resumen de ajustes. **Cantar** pide el micrófono; **Escuchar demo** se canta sola enviando la guía al detector.
+- **Partida a pantalla completa**: solo el escenario, la pausa, la nota que estás cantando y la puntuación. Respeta el notch, mantiene la pantalla encendida y se pausa al cambiar de app.
+- **Pausa**: continuar, repetir la frase actual en bucle, empezar de nuevo, ajustes o salir. Espacio/Esc también pausan; el botón atrás del móvil sale.
+- **Ajustes** (dificultad, velocidad, tono por canción, octava, volúmenes, retraso del micro, Do-Re-Mi/C-D-E, pista de la voz en MIDI) guardados entre sesiones.
+- **Resultados** con estrellas animadas, nota, desglose y aviso de nuevo récord.
+- Arrastra un `.mid`, `.kar`, `.txt` (UltraStar) o `.json` sobre la página para importarlo.
 
 ## Uso básico
 
@@ -69,7 +74,9 @@ npm run dev          # sirve el repo en http://localhost:5173
 | `leadIn` | `3` | s de cuenta atrás antes de la primera nota |
 | `streakStep` | `2` | s seguidos afinando para subir un nivel de racha |
 | `notation` | `'solfege'` | nombres de la rejilla: `'solfege'` (Do4) o `'english'` (C4) |
-| `pixelsPerSecond` | `170` | zoom horizontal |
+| `pixelsPerSecond` | `'auto'` | zoom horizontal (px por segundo); `'auto'` se adapta al ancho |
+| `insets` | `{}` | `{ top, bottom }` en px reservados para tus barras o el notch |
+| `hud`, `lyricsLine`, `results` | `true` | dibujar marcador, frase karaoke y resultados en el canvas |
 | `theme`, `labels` | | colores y textos (ver `DEFAULT_THEME`, `DEFAULT_LABELS`) |
 | `audioContext` | | comparte el `AudioContext` de tu app |
 
@@ -93,7 +100,7 @@ Pasa `canvas = null` para usar el motor sin gráficos.
 - Cada nota mide qué parte de su duración estuviste dentro de la tolerancia (con un 80 % basta para el 100 %, se perdona el ataque).
 - `perfect` ≥ 85 %, `great` ≥ 60 %, `good` ≥ 30 %, si no `miss`.
 - Puntos = precisión × 100 × peso por duración × multiplicador de combo (×2 a partir de 5 notas, ×3 desde 15, ×4 desde 30). Las notas doradas valen el doble.
-- Nota final por afinación media: S ≥ 90 %, A ≥ 80 %, B ≥ 65 %, C ≥ 50 %, D. Estrellas = afinación × 5 (en medias estrellas).
+- Nota final por afinación media: S ≥ 90 %, A ≥ 80 %, B ≥ 65 %, C ≥ 50 %, D. Estrellas de 0 a 5 en medias estrellas; con un 90 % (una S) ya tienes las 5.
 
 ## Piezas sueltas (para otros juegos)
 

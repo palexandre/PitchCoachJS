@@ -8,6 +8,8 @@ PitchCoach es una librería JavaScript **vanilla, sin dependencias y sin build**
 
 ## Probar el ejemplo
 
+**Demo online:** https://palexandre.github.io/PitchCoachJS/example/
+
 ```bash
 npm run dev          # sirve el repo en http://localhost:5173
 # abre http://localhost:5173/example/

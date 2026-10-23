@@ -1,0 +1,53 @@
+#TITLE:Estrellita
+#ARTIST:Tradicional
+#LANGUAGE:Spanish
+#BPM:200
+#GAP:2000
+: 0 7 0 Es
+: 8 7 0 tre
+: 16 7 7 lli
+: 24 7 7 ta, 
+: 32 7 9 ¿dón
+: 40 7 9 de es
+: 48 15 7 tás? 
+- 64
+: 64 7 5 Me 
+: 72 7 5 pre
+: 80 7 4 gun
+: 88 7 4 to 
+: 96 7 2 quién 
+: 104 7 2 se
+: 112 15 0 rás. 
+- 128
+: 128 7 7 En 
+: 136 7 7 el 
+: 144 7 5 cie
+: 152 7 5 lo o 
+: 160 7 4 en 
+: 168 7 4 el 
+: 176 15 2 mar, 
+- 192
+: 192 7 7 un 
+* 200 7 7 dia
+: 208 7 5 man
+: 216 7 5 te 
+: 224 7 4 de 
+: 232 7 4 ver
+: 240 15 2 dad. 
+- 256
+: 256 7 0 Es
+: 264 7 0 tre
+: 272 7 7 lli
+: 280 7 7 ta, 
+: 288 7 9 ¿dón
+: 296 7 9 de es
+: 304 15 7 tás? 
+- 320
+: 320 7 5 Me 
+: 328 7 5 pre
+: 336 7 4 gun
+: 344 7 4 to 
+: 352 7 2 quién 
+: 360 7 2 se
+: 368 15 0 rás.
+E

@@ -1,0 +1,19 @@
+{
+  "name": "entona",
+  "version": "0.1.0",
+  "description": "Librería JS (vanilla, sin dependencias) para practicar canto tipo karaoke: carga MIDI/KAR/UltraStar/JSON con letra, escucha el micrófono, detecta la afinación y puntúa.",
+  "type": "module",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": ["src"],
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "dev": "npx serve -l 5173 .",
+    "songs": "node tools/make-demo-songs.js"
+  },
+  "keywords": ["karaoke", "singing", "pitch-detection", "midi", "ultrastar", "solfege", "web-audio", "game"],
+  "license": "MIT"
+}

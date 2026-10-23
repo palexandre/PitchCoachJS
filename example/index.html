@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Entona · practica a cantar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Entona<span>♪</span></h1>
+    <p>Carga una melodía con letra, canta y suma estrellas.</p>
+  </header>
+
+  <main>
+    <section class="stage">
+      <canvas id="stage"></canvas>
+      <div id="drop-hint" class="drop-hint">Suelta aquí tu .mid, .kar, .txt (UltraStar) o .json</div>
+    </section>
+
+    <section class="controls">
+      <div class="row">
+        <label class="field">
+          <span>Canción</span>
+          <select id="song-select">
+            <option value="songs/martinillo.mid">Martinillo (MIDI)</option>
+            <option value="songs/estrellita.txt">Estrellita (UltraStar)</option>
+            <option value="songs/escala.json">Escala de Do (JSON)</option>
+          </select>
+        </label>
+        <label class="button ghost file">
+          Cargar archivo…
+          <input id="file" type="file" accept=".mid,.midi,.kar,.txt,.json">
+        </label>
+        <label class="field" id="track-field" hidden>
+          <span>Pista de la voz</span>
+          <select id="track-select"></select>
+        </label>
+      </div>
+
+      <div class="row">
+        <button id="sing" class="button primary">🎤 Cantar</button>
+        <button id="demo" class="button">▶ Demo (se canta solo)</button>
+        <button id="pause" class="button" disabled>⏸ Pausa</button>
+        <button id="restart" class="button" disabled>↺ Reiniciar</button>
+        <span id="live-note" class="live-note">–</span>
+      </div>
+
+      <div class="row settings">
+        <label class="field">
+          <span>Dificultad</span>
+          <select id="difficulty">
+            <option value="facil">Fácil</option>
+            <option value="normal" selected>Normal</option>
+            <option value="dificil">Difícil</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Velocidad</span>
+          <select id="speed">
+            <option value="0.6">60 %</option>
+            <option value="0.75">75 %</option>
+            <option value="1" selected>100 %</option>
+            <option value="1.25">125 %</option>
+          </select>
+        </label>
+        <div class="field">
+          <span>Tono</span>
+          <div class="stepper">
+            <button id="tr-down" class="button small">−</button>
+            <output id="transpose">0</output>
+            <button id="tr-up" class="button small">+</button>
+          </div>
+        </div>
+        <label class="field">
+          <span>Guía</span>
+          <input id="guide" type="range" min="0" max="0.8" step="0.05" value="0.35">
+        </label>
+        <label class="field">
+          <span>Acompañamiento</span>
+          <input id="backing" type="range" min="0" max="0.6" step="0.05" value="0.18">
+        </label>
+        <label class="check">
+          <input id="octave" type="checkbox" checked> Vale cualquier octava
+        </label>
+        <label class="check">
+          <input id="loop" type="checkbox"> Repetir frase actual
+        </label>
+      </div>
+    </section>
+
+    <section class="log">
+      <h2>Últimas notas</h2>
+      <ol id="events"></ol>
+    </section>
+  </main>
+
+  <footer>
+    Consejo: usa auriculares para que el micrófono no escuche la guía. ·
+    <a href="https://github.com/">Entona en GitHub</a>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

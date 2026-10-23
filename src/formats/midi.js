@@ -243,6 +243,8 @@ export function midiToSong(input, opts = {}) {
     .map((n) => ({ start: toSec(n.startTick), end: toSec(n.endTick), midi: n.midi, velocity: n.velocity / 127, channel: n.channel }));
 
   const seqName = midi.tracks[0] ? trackName(midi.tracks[0]) : null;
+  const firstTempo = midi.tracks.flatMap((t) => t.events).filter((e) => e.kind === 'meta' && e.type === 0x51).sort((a, b) => a.tick - b.tick)[0];
+  const tempo = firstTempo ? Math.round((60e6 / ((firstTempo.data[0] << 16) | (firstTempo.data[1] << 8) | firstTempo.data[2])) * 100) / 100 : 120;
   return {
     title: opts.title || headers.title || seqName || '',
     artist: headers.artist || '',
@@ -250,6 +252,7 @@ export function midiToSong(input, opts = {}) {
     accompaniment,
     meta: {
       format: 'midi',
+      tempo,
       melody: chosen.id,
       hasLyrics: lyrics.length > 0,
       candidates: candidates.map(({ id, name, channel, noteCount, lyricMatches }) => ({ id, name, channel, noteCount, lyricMatches })),

@@ -1,6 +1,5 @@
 /**
- * Minimal Standard MIDI File writer (format 1), used to build the demo songs
- * and the tests. Not part of the library.
+ * Minimal Standard MIDI File writer (format 1) with lyric events.
  *
  * tracks: [{ name, channel, notes: [{ tick, length, midi, velocity?, lyric? }] }]
  */

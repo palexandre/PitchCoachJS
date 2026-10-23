@@ -1,5 +1,6 @@
-import { Entona, loadSong, midiToName } from '../src/index.js';
+import { Entona, loadSong, midiToName, songToDraft, joinLyrics } from '../src/index.js';
 import { readJSON, writeJSON, listImported, saveImported, deleteImported } from './store.js';
+import { SongEditor, emptyDraft } from './editor.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -34,7 +35,12 @@ let library = [];
 let current = null;  // library entry being played or viewed
 let mode = 'mic';    // 'mic' | 'demo'
 
+// One AudioContext for the whole app (created on first use, resumed on gestures).
+let audioCtx = null;
+const audio = () => (audioCtx ??= new AudioContext());
+
 const game = new Entona($('#stage'), { ...settings, hud: false, results: false, leadIn: 3 });
+let returnTo = 'home'; // screen to go back to when leaving a game
 
 // =========================================================================
 // Library
@@ -48,7 +54,7 @@ async function initLibrary() {
   }));
   const imported = await listImported();
   const importedEntries = await Promise.all(imported.map(async (r) => {
-    const entry = { id: r.id, name: r.name, source: r.bytes, imported: true, addedAt: r.addedAt };
+    const entry = { id: r.id, name: r.name, source: r.bytes, imported: true, own: !!r.own, addedAt: r.addedAt };
     await parseEntry(entry);
     return entry;
   }));
@@ -86,7 +92,7 @@ function renderLibrary() {
       </span>
       <span class="song-best">${b
         ? `<span class="mini-grade">${b.grade}</span><span class="mini-stars">${starsText(b.stars)}</span>`
-        : entry.imported && Date.now() - (entry.addedAt ?? 0) < 864e5 ? '<span class="tag-new">Nueva</span>' : ''}
+        : entry.own ? '<span class="tag-new">Tuya</span>' : entry.imported && Date.now() - (entry.addedAt ?? 0) < 864e5 ? '<span class="tag-new">Nueva</span>' : ''}
       </span>`;
     btn.querySelector('.song-title').textContent = s.title;
     btn.querySelector('.song-meta').textContent = [entry.artist || s.artist, formatDuration(s), FORMAT_TEXT[s.meta.format]].filter(Boolean).join(' · ');
@@ -173,6 +179,7 @@ function openSongSheet(entry) {
     ? `<span>Tu récord</span><span class="mini-stars">${starsText(b.stars)}</span><span>${b.grade} · ${b.score.toLocaleString('es')}</span>`
     : '';
   $('#delete-song').hidden = !entry.imported;
+  $('#edit-btn span').textContent = entry.own ? 'Editar' : 'Editar una copia';
   renderChips();
   openDialog($('#song-sheet'));
 }
@@ -196,15 +203,21 @@ $('#sing-btn').addEventListener('click', () => startGame('mic'));
 $('#demo-btn').addEventListener('click', () => startGame('demo'));
 $('#delete-song').addEventListener('click', async () => {
   if (!current?.imported) return;
-  if (!confirm(`¿Quitar «${current.song.title}» de tu biblioteca?`)) return;
-  await deleteImported(current.id);
-  library = library.filter((e) => e !== current);
-  delete best[current.id];
-  writeJSON('best', best);
+  const ok = await askConfirm({ title: '¿Quitar esta canción?', text: `«${current.song.title}» se eliminará de tu biblioteca.`, ok: 'Quitar', cancel: 'Cancelar', danger: true });
+  if (!ok) return;
+  await removeSong(current.id);
   closeDialog($('#song-sheet'));
-  renderLibrary();
   toast('Canción eliminada');
 });
+$('#edit-btn').addEventListener('click', () => openEditorWith(current));
+
+async function removeSong(id) {
+  await deleteImported(id);
+  library = library.filter((e) => e.id !== id);
+  delete best[id];
+  writeJSON('best', best);
+  renderLibrary();
+}
 
 // =========================================================================
 // Settings
@@ -216,7 +229,7 @@ function openSettings() {
 }
 
 function syncSettingsUI() {
-  document.querySelectorAll('.segmented').forEach((seg) => {
+  document.querySelectorAll('.segmented[data-setting]').forEach((seg) => {
     const key = seg.dataset.setting;
     seg.querySelectorAll('button').forEach((b) => b.setAttribute('aria-checked', String(String(settings[key]) === b.dataset.value)));
   });
@@ -242,11 +255,15 @@ function updateSetting(patch) {
   Object.assign(settings, patch);
   writeJSON('settings', settings);
   game.set(patch);
+  if ('notation' in patch) {
+    editor.keyboard.setNotation(settings.notation);
+    editor.draw();
+  }
   syncSettingsUI();
   if (current) renderChips();
 }
 
-document.querySelectorAll('.segmented').forEach((seg) => {
+document.querySelectorAll('.segmented[data-setting]').forEach((seg) => {
   seg.addEventListener('click', (e) => {
     const btn = e.target.closest('button');
     if (!btn) return;
@@ -303,7 +320,7 @@ function isPlaying() {
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('is-active', s.id === id));
-  document.body.classList.toggle('playing', id === 'play');
+  document.body.classList.toggle('playing', id === 'play' || id === 'editor');
 }
 
 async function startGame(m) {
@@ -317,6 +334,7 @@ async function startGame(m) {
 
   try {
     closeAllDialogs();
+    game.audioContext ??= audio();
     showScreen('play');
     if (!history.state?.play) history.pushState({ play: true }, '');
     layoutHud();
@@ -343,9 +361,14 @@ function exitGame({ fromHistory = false } = {}) {
   game.setLoop(null);
   keepAwake(false);
   closeAllDialogs();
-  showScreen('home');
+  showScreen(returnTo);
+  if (returnTo === 'editor') editor.draw();
+  returnTo = 'home';
   renderLibrary();
-  if (!fromHistory && history.state?.play) history.back();
+  if (!fromHistory && history.state?.play) {
+    ignorePop = true;
+    history.back();
+  }
 }
 
 function pauseGame() {
@@ -402,9 +425,124 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden && game.state === 'playing') pauseGame();
 });
 
+let ignorePop = false;
 window.addEventListener('popstate', () => {
+  if (ignorePop) {
+    ignorePop = false;
+    return;
+  }
   if (isPlaying()) exitGame({ fromHistory: true });
+  else if (isEditing()) {
+    // keep the editor until it confirms leaving (it may ask about unsaved changes)
+    history.pushState({ editor: true }, '');
+    editor.exit();
+  }
 });
+
+// =========================================================================
+// Editor
+// =========================================================================
+
+function isEditing() {
+  return $('#editor').classList.contains('is-active');
+}
+
+const editor = new SongEditor({
+  root: $('#editor'),
+  audio,
+  notation: () => settings.notation,
+  toast,
+  openDialog,
+  closeDialog,
+  confirm: askConfirm,
+  async onSave(json, id) {
+    id ||= `own-${Date.now()}`;
+    const bytes = new TextEncoder().encode(JSON.stringify(json)).buffer;
+    const prev = library.find((e) => e.id === id);
+    const entry = { id, name: `${json.title}.json`, source: bytes, imported: true, own: true, addedAt: prev?.addedAt ?? Date.now() };
+    await parseEntry(entry);
+    await saveImported({ id, name: entry.name, bytes, addedAt: entry.addedAt, own: true });
+    library = [entry, ...library.filter((e) => e.id !== id)];
+    renderLibrary();
+    return id;
+  },
+  async onTry(json) {
+    const song = await loadSong(json);
+    current = { id: 'editor-preview', song, artist: 'Borrador' };
+    returnTo = 'editor';
+    startGame('mic');
+  },
+  onExit() {
+    showScreen('home');
+    renderLibrary();
+    if (history.state?.editor) {
+      ignorePop = true;
+      history.back();
+    }
+  },
+  onDelete: (id) => removeSong(id),
+});
+
+function showEditor() {
+  closeAllDialogs();
+  showScreen('editor');
+  if (!history.state?.editor) history.pushState({ editor: true }, '');
+  requestAnimationFrame(() => editor.draw());
+}
+
+$('#create-song').addEventListener('click', () => {
+  showEditor();
+  if (editor.restoreAutosave()) toast('Hemos recuperado tu borrador');
+  else editor.open(emptyDraft());
+});
+
+function openEditorWith(entry) {
+  const song = entry.song;
+  let saved = null;
+  if (entry.own) {
+    try {
+      saved = JSON.parse(new TextDecoder().decode(entry.source));
+    } catch { /* not ours after all */ }
+  }
+  const draft = {
+    ...songToDraft(song),
+    beatsPerBar: 4,
+    lyricsText: saved?.lyricsText ?? joinLyrics(song.notes),
+  };
+  showEditor();
+  editor.open(draft, { id: entry.own ? entry.id : null });
+  if (!entry.own) toast(song.accompaniment.length ? 'Editas una copia (sin el acompañamiento); el original no cambia' : 'Editas una copia; el original no cambia');
+}
+
+// ---- confirm dialog ---------------------------------------------------------------
+
+function askConfirm({ title, text = '', ok = 'Aceptar', cancel = 'Cancelar', danger = false }) {
+  const d = $('#confirm');
+  $('#confirm-title').textContent = title;
+  $('#confirm-text').textContent = text;
+  $('#confirm-ok').textContent = ok;
+  $('#confirm-cancel').textContent = cancel;
+  $('#confirm-ok').classList.toggle('btn-danger', danger);
+  openDialog(d);
+  return new Promise((resolve) => {
+    const done = (v) => {
+      d.removeEventListener('click', onClick);
+      d.removeEventListener('cancel', onCancel);
+      closeDialog(d);
+      resolve(v);
+    };
+    const onClick = (e) => {
+      const a = e.target.closest('[data-answer]')?.dataset.answer;
+      if (a) done(a === 'yes');
+    };
+    const onCancel = (e) => {
+      e.preventDefault();
+      done(false);
+    };
+    d.addEventListener('click', onClick);
+    d.addEventListener('cancel', onCancel);
+  });
+}
 
 // ---- HUD ------------------------------------------------------------------------
 
@@ -566,6 +704,8 @@ function closeAllDialogs() {
     d.close();
   });
 }
+
+document.querySelectorAll('dialog.modal [data-close]').forEach((b) => b.addEventListener('click', () => closeDialog(b.closest('dialog'))));
 
 document.querySelectorAll('dialog.sheet').forEach((d) => {
   // tap on the backdrop closes sheets

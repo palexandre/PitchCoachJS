@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { loadSong, parsePitch, midiToName } from '../src/index.js';
-import { writeMidi } from '../tools/midi-writer.js';
+import { writeMidi } from '../src/formats/midi-writer.js';
 
 const songsDir = new URL('../example/songs/', import.meta.url);
 

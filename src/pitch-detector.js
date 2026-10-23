@@ -77,6 +77,7 @@ export class PitchDetector extends Emitter {
     this._history = [];
     this._raf = 0;
     this.last = null;
+    this.volume = 0; // RMS of the last frame read, even when no pitch was found
   }
 
   get running() {
@@ -142,6 +143,7 @@ export class PitchDetector extends Emitter {
     let rms = 0;
     for (let i = 0; i < buf.length; i++) rms += buf[i] * buf[i];
     rms = Math.sqrt(rms / buf.length);
+    this.volume = rms;
 
     const res = rms >= this.options.minVolume ? yin(buf, this.audioContext.sampleRate, this.options) : null;
     if (!res || res.freq < this.options.minFreq || res.freq > this.options.maxFreq) {

@@ -35,16 +35,27 @@
 
     <div class="library" id="library" role="list"></div>
 
-    <label class="import-card" id="import-card">
-      <input id="file" type="file" accept=".mid,.midi,.kar,.txt,.json" hidden>
-      <span class="import-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24"><path d="M12 16V4m0 0-4.5 4.5M12 4l4.5 4.5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
-      </span>
-      <span class="import-text">
-        <strong>Importar canción</strong>
-        <small>MIDI con letra, KAR, UltraStar (.txt) o JSON · también puedes arrastrarla aquí</small>
-      </span>
-    </label>
+    <div class="home-actions">
+      <button class="import-card create-card" id="create-song" type="button">
+        <span class="import-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        </span>
+        <span class="import-text">
+          <strong>Crear canción</strong>
+          <small>Escribe la melodía con el piano, grábala tocando o cantando y añade la letra</small>
+        </span>
+      </button>
+      <label class="import-card" id="import-card">
+        <input id="file" type="file" accept=".mid,.midi,.kar,.txt,.json" hidden>
+        <span class="import-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 16V4m0 0-4.5 4.5M12 4l4.5 4.5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+        </span>
+        <span class="import-text">
+          <strong>Importar canción</strong>
+          <small>MIDI con letra, KAR, UltraStar (.txt) o JSON · también puedes arrastrarla aquí</small>
+        </span>
+      </label>
+    </div>
 
     <p class="home-foot">Consejo: usa auriculares para que el micrófono solo te oiga a ti.</p>
   </section>
@@ -75,6 +86,206 @@
     <div class="mode-badge" id="mode-badge" hidden>Demo</div>
   </section>
 
+
+  <!-- ============ EDITOR ============ -->
+  <section id="editor" class="screen" aria-label="Editor de canciones">
+    <header class="ed-header">
+      <button class="icon-btn" id="ed-back" aria-label="Volver">
+        <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <input class="ed-title" id="ed-title" type="text" placeholder="Mi canción" aria-label="Título" maxlength="80" autocomplete="off">
+      <button class="icon-btn" id="ed-more" aria-label="Más opciones">
+        <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg>
+      </button>
+      <button class="btn btn-primary btn-sm" id="ed-save">Guardar</button>
+    </header>
+
+    <div class="ed-toolbar" role="toolbar" aria-label="Herramientas">
+      <button class="tool" id="ed-play" aria-label="Escuchar">
+        <svg class="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg>
+        <svg class="i-stop" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/></svg>
+        <span class="label">Escuchar</span>
+      </button>
+      <button class="tool tool-rec" id="ed-rec" aria-label="Grabar">
+        <span class="rec-dot" aria-hidden="true"></span>
+        <span class="label">Grabar</span>
+      </button>
+      <span class="tool-sep" aria-hidden="true"></span>
+      <div class="segmented durations" id="ed-durations" role="radiogroup" aria-label="Duración de la nota">
+        <button role="radio" data-value="0.25" title="Semicorchea (1)" aria-label="Semicorchea"><svg viewBox="0 0 24 24"><ellipse cx="9" cy="17.5" rx="4" ry="3" transform="rotate(-20 9 17.5)" class="fill"/><path d="M12.8 16.5V3.5c1.5 2 4.5 2.5 4.5 5.5M12.8 7.5c1.5 2 4.5 2.5 4.5 5.5"/></svg></button>
+        <button role="radio" data-value="0.5" title="Corchea (2)" aria-label="Corchea"><svg viewBox="0 0 24 24"><ellipse cx="9" cy="17.5" rx="4" ry="3" transform="rotate(-20 9 17.5)" class="fill"/><path d="M12.8 16.5V3.5c1.5 2.2 4.8 3 4.5 7"/></svg></button>
+        <button role="radio" data-value="1" title="Negra (3)" aria-label="Negra"><svg viewBox="0 0 24 24"><ellipse cx="9" cy="17.5" rx="4" ry="3" transform="rotate(-20 9 17.5)" class="fill"/><path d="M12.8 16.5V3.5"/></svg></button>
+        <button role="radio" data-value="2" title="Blanca (4)" aria-label="Blanca"><svg viewBox="0 0 24 24"><ellipse cx="9" cy="17.5" rx="4" ry="3" transform="rotate(-20 9 17.5)"/><path d="M12.8 16.5V3.5"/></svg></button>
+        <button role="radio" data-value="4" title="Redonda (5)" aria-label="Redonda"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="13" rx="5.5" ry="3.8"/></svg></button>
+      </div>
+      <button class="tool" id="ed-rest" title="Silencio (0)" aria-label="Añadir silencio">
+        <svg viewBox="0 0 24 24"><path d="M9.5 3.5l4 4.5-3 3.5 4 4.5c-2.5-1-4.5 0-3 3"/></svg>
+        <span class="label">Silencio</span>
+      </button>
+      <span class="tool-sep" aria-hidden="true"></span>
+      <button class="tool icon-only" id="ed-undo" aria-label="Deshacer" title="Deshacer (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
+      <button class="tool icon-only" id="ed-redo" aria-label="Rehacer" title="Rehacer (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
+      <button class="tool tempo-chip" id="ed-tempo-chip" aria-label="Tempo"><span aria-hidden="true">♩=</span><span id="ed-tempo">90</span></button>
+    </div>
+
+    <div class="ed-roll-wrap">
+      <canvas id="ed-roll" aria-label="Partitura en forma de piano roll"></canvas>
+      <div class="ed-zoom">
+        <button class="icon-btn small glass" id="ed-zoom-out" aria-label="Alejar">−</button>
+        <button class="icon-btn small glass" id="ed-zoom-in" aria-label="Acercar">+</button>
+      </div>
+    </div>
+
+    <div class="ed-selbar" id="ed-selbar" hidden>
+      <div class="ed-sel-label"><b id="ed-sel-name"></b><small id="ed-sel-info"></small></div>
+      <div class="ed-sel-actions">
+        <button class="icon-btn small" id="ed-sel-down" aria-label="Bajar un semitono"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+        <button class="icon-btn small" id="ed-sel-up" aria-label="Subir un semitono"><svg viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg></button>
+        <button class="icon-btn small" id="ed-sel-left" aria-label="Mover antes"><svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></button>
+        <button class="icon-btn small" id="ed-sel-right" aria-label="Mover después"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
+        <button class="icon-btn small" id="ed-sel-shorter" aria-label="Más corta">−</button>
+        <button class="icon-btn small" id="ed-sel-longer" aria-label="Más larga">+</button>
+        <button class="icon-btn small danger" id="ed-sel-delete" aria-label="Borrar nota"><svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></svg></button>
+        <button class="icon-btn small" id="ed-sel-close" aria-label="Quitar selección"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </div>
+    </div>
+
+    <button class="ed-lyrics-bar" id="ed-lyrics-bar" type="button">
+      <span class="ed-lyrics-label">Letra</span>
+      <span class="ed-lyrics-preview" id="ed-lyrics-preview"></span>
+      <span class="badge" id="ed-lyrics-badge"></span>
+    </button>
+
+    <div class="ed-keys-wrap">
+      <div class="ed-keys-bar">
+        <button class="icon-btn small" id="ed-oct-down" aria-label="Octava más grave"><svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></button>
+        <button class="write-toggle" id="ed-write" aria-pressed="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/></svg>
+          <span class="on-text">El piano escribe notas</span><span class="off-text">El piano solo suena</span>
+        </button>
+        <button class="icon-btn small" id="ed-oct-up" aria-label="Octava más aguda"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
+      </div>
+      <div class="ed-keys" id="ed-keys"></div>
+    </div>
+
+    <!-- record -->
+    <dialog class="modal ed-modal" id="ed-record" aria-labelledby="ed-record-title">
+      <h2 id="ed-record-title">Grabar melodía</h2>
+      <p class="muted small" id="ed-rec-from"></p>
+      <div class="rec-options">
+        <button class="rec-option featured" data-source="mic-piano">
+          <span class="rec-icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 5v8M12 5v8M16 5v8M6.5 13h3M10.5 13h3M14.5 13h3M8 13v6M12 13v6M16 13v6"/></svg></span>
+          <strong>Un piano de verdad</strong>
+          <small>Deja el móvil cerca del piano y toca la melodía, nota a nota (sin acordes)</small>
+        </button>
+        <button class="rec-option" data-source="voice">
+          <span class="rec-icon"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg></span>
+          <strong>Cantando</strong>
+          <small>Entona detecta tus notas por el micrófono</small>
+        </button>
+        <button class="rec-option" data-source="keys">
+          <span class="rec-icon"><svg viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="10" rx="2"/><path d="M6 10.5h.01M9.5 10.5h.01M13 10.5h.01M16.5 10.5h.01M7.5 14h9"/></svg></span>
+          <strong>Teclado de la app</strong>
+          <small>El piano de la pantalla o el teclado del ordenador</small>
+        </button>
+      </div>
+      <label class="setting compact">
+        <div class="setting-label"><span>Metrónomo mientras grabas</span><small>Cuenta atrás de un compás. Con micrófono el pulso se ve pero no suena, para no grabarlo</small></div>
+        <input type="checkbox" class="switch" id="ed-rec-metro">
+      </label>
+      <button class="btn btn-ghost" data-close>Cancelar</button>
+    </dialog>
+
+    <!-- lyrics -->
+    <dialog class="sheet" id="ed-lyrics" aria-labelledby="ed-lyrics-title">
+      <div class="sheet-grip" aria-hidden="true"></div>
+      <div class="sheet-body">
+        <div class="sheet-title-row">
+          <h2 id="ed-lyrics-title">Letra</h2>
+          <button class="btn btn-primary btn-sm" data-close>Listo</button>
+        </div>
+        <textarea id="ed-lyrics-text" rows="6" placeholder="Can-ta con-mi-go&#10;la me-lo-dí-a" spellcheck="false"></textarea>
+        <div class="lyrics-meta">
+          <span class="lyrics-count" id="ed-lyrics-count"></span>
+          <span class="muted small" id="ed-lyrics-diff"></span>
+        </div>
+        <ul class="help-list">
+          <li>Cada sílaba va a una nota, en orden. Separa las sílabas con <kbd>-</kbd>: <code>can-ción</code></li>
+          <li>Un salto de línea empieza una frase nueva del karaoke.</li>
+          <li>Une palabras en una nota con <kbd>_</kbd>: <code>de_es-tás</code> · alarga una sílaba con <kbd>~</kbd></li>
+        </ul>
+      </div>
+    </dialog>
+
+    <!-- more -->
+    <dialog class="sheet" id="ed-menu" aria-labelledby="ed-menu-title">
+      <div class="sheet-grip" aria-hidden="true"></div>
+      <div class="sheet-body">
+        <div class="sheet-title-row">
+          <h2 id="ed-menu-title">Canción</h2>
+          <button class="icon-btn" data-close aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+        </div>
+        <div class="group">
+          <h3>Ritmo</h3>
+          <div class="setting">
+            <div class="setting-label"><span>Tempo</span><small>Negras por minuto</small></div>
+            <div class="stepper">
+              <button class="icon-btn small" id="ed-bpm-down" aria-label="Más lento">−</button>
+              <output id="ed-bpm">90</output>
+              <button class="icon-btn small" id="ed-bpm-up" aria-label="Más rápido">+</button>
+            </div>
+          </div>
+          <input class="full-range" type="range" id="ed-bpm-range" min="40" max="220" step="1" aria-label="Tempo">
+          <div class="setting">
+            <div class="setting-label"><span>Compás</span></div>
+            <div class="segmented" id="ed-bpb" role="radiogroup" aria-label="Compás">
+              <button role="radio" data-value="2">2/4</button>
+              <button role="radio" data-value="3">3/4</button>
+              <button role="radio" data-value="4">4/4</button>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-label"><span>Ajustar a</span><small>Precisión al grabar y mover</small></div>
+            <div class="segmented" id="ed-grid" role="radiogroup" aria-label="Cuantización">
+              <button role="radio" data-value="0.25">1/16</button>
+              <button role="radio" data-value="0.5">1/8</button>
+              <button role="radio" data-value="1">1/4</button>
+            </div>
+          </div>
+          <label class="setting">
+            <div class="setting-label"><span>Metrónomo</span><small>Al escuchar y al grabar</small></div>
+            <input type="checkbox" class="switch" id="ed-metro">
+          </label>
+        </div>
+        <div class="menu">
+          <button class="btn btn-primary" data-action="try">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
+            Probar cantando
+          </button>
+          <div class="menu-row">
+            <button class="btn" data-action="json">Exportar JSON</button>
+            <button class="btn" data-action="midi">Exportar MIDI</button>
+          </div>
+          <div class="menu-row">
+            <button class="btn btn-ghost" data-action="new">Canción nueva</button>
+            <button class="btn btn-ghost" data-action="clear">Borrar notas</button>
+          </div>
+          <button class="link-danger" data-action="delete" id="ed-delete">Eliminar canción</button>
+        </div>
+      </div>
+    </dialog>
+  </section>
+
+  <!-- ============ CONFIRM ============ -->
+  <dialog class="modal" id="confirm" aria-labelledby="confirm-title">
+    <h2 id="confirm-title"></h2>
+    <p class="muted" id="confirm-text"></p>
+    <div class="menu">
+      <button class="btn btn-primary" data-answer="yes" id="confirm-ok"></button>
+      <button class="btn btn-ghost" data-answer="no" id="confirm-cancel"></button>
+    </div>
+  </dialog>
+
   <!-- ============ SONG SHEET ============ -->
   <dialog class="sheet" id="song-sheet" aria-labelledby="sheet-title">
     <div class="sheet-grip" aria-hidden="true"></div>
@@ -101,7 +312,13 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
           <span>Cantar</span>
         </button>
-        <button class="btn btn-ghost" id="demo-btn">Escuchar demo</button>
+        <div class="sheet-actions-row">
+          <button class="btn btn-ghost" id="demo-btn">Escuchar demo</button>
+          <button class="btn btn-ghost" id="edit-btn">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4ZM13.5 6.5l4 4"/></svg>
+            <span>Editar</span>
+          </button>
+        </div>
       </div>
 
       <button class="link-danger" id="delete-song" hidden>Quitar de la biblioteca</button>

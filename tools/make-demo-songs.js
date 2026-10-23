@@ -1,7 +1,7 @@
 // Generates example/songs/martinillo.mid (traditional song, public domain).
 // Usage: node tools/make-demo-songs.js
 import { writeFileSync } from 'node:fs';
-import { writeMidi } from './midi-writer.js';
+import { writeMidi } from '../src/formats/midi-writer.js';
 
 const Q = 480; // quarter note
 const seq = (items) => {

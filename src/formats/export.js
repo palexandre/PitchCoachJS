@@ -1,6 +1,6 @@
 /**
  * Exporters: save songs written in the editor (or any loaded song) as
- * Entona JSON or as a MIDI file with lyric events.
+ * PitchCoach JSON or as a MIDI file with lyric events.
  *
  * A "draft" is the editor's model, with times in beats:
  *   { title, artist, bpm, lyricsText, notes: [{ beat, length, midi, lyric }] }
@@ -8,7 +8,7 @@
 import { writeMidi } from './midi-writer.js';
 import { midiToName } from '../notes.js';
 
-/** Draft → Entona JSON object (loadable with loadSong). */
+/** Draft → PitchCoach JSON object (loadable with loadSong). */
 export function draftToJSON(draft) {
   return {
     title: draft.title || 'Mi canción',

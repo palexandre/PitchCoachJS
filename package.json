@@ -1,5 +1,5 @@
 {
-  "name": "entona",
+  "name": "pitchcoach",
   "version": "0.1.0",
   "description": "Librería JS (vanilla, sin dependencias) para practicar canto tipo karaoke: carga MIDI/KAR/UltraStar/JSON con letra, escucha el micrófono, detecta la afinación y puntúa.",
   "type": "module",

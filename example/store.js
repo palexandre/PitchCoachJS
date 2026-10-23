@@ -1,7 +1,7 @@
 // Per-device persistence for the example app: settings, best scores and imported songs.
 // Everything is optional: in private mode or with storage blocked the app still works.
 
-const PREFIX = 'entona:';
+const PREFIX = 'pitchcoach:';
 
 export function readJSON(key, fallback) {
   try {
@@ -24,7 +24,7 @@ let dbPromise = null;
 
 function db() {
   dbPromise ??= new Promise((resolve, reject) => {
-    const req = indexedDB.open('entona', 1);
+    const req = indexedDB.open('pitchcoach', 1);
     req.onupgradeneeded = () => req.result.createObjectStore('songs', { keyPath: 'id' });
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);

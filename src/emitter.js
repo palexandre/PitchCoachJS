@@ -28,7 +28,7 @@ export class Emitter {
       try {
         fn(data);
       } catch (err) {
-        console.error(`[entona] error in "${type}" handler`, err);
+        console.error(`[pitchcoach] error in "${type}" handler`, err);
       }
     }
   }

@@ -1,10 +1,10 @@
-# Entona ♪
+# PitchCoachJS ♪
 
 **Practica a cantar como en un karaoke… pero con alguien que te escucha.**
 
-Entona es una librería JavaScript **vanilla, sin dependencias y sin build**. Carga una melodía con letra (MIDI, KAR, UltraStar o JSON), la dibuja como barras que avanzan, escucha tu voz por el micrófono y te puntúa en tiempo real: la letra se pone verde cuando das la nota, salen estrellas cuando mantienes la afinación y al final recibes nota (S/A/B/C/D) y de 0 a 5 estrellas.
+PitchCoach es una librería JavaScript **vanilla, sin dependencias y sin build**. Carga una melodía con letra (MIDI, KAR, UltraStar o JSON), la dibuja como barras que avanzan, escucha tu voz por el micrófono y te puntúa en tiempo real: la letra se pone verde cuando das la nota, salen estrellas cuando mantienes la afinación y al final recibes nota (S/A/B/C/D) y de 0 a 5 estrellas.
 
-![Entona en acción](docs/screenshot.png)
+![PitchCoach en acción](docs/screenshot.png)
 
 ## Probar el ejemplo
 
@@ -24,7 +24,7 @@ La página de ejemplo es una app completa y responsive (móvil primero):
 - **Ajustes** (dificultad, velocidad, tono por canción, octava, volúmenes, retraso del micro, Do-Re-Mi/C-D-E, pista de la voz en MIDI) guardados entre sesiones.
 - **Resultados** con estrellas animadas, nota, desglose y aviso de nuevo récord.
 - **Editor de canciones** («Crear canción», o «Editar» en cualquier canción):
-  - **Grabar desde un piano de verdad**: deja el móvil cerca del piano, cuenta atrás de un compás y toca la melodía nota a nota. Entona separa cada nota por el golpe de tecla (así distingue dos notas iguales seguidas) y la ajusta al tempo. No transcribe acordes.
+  - **Grabar desde un piano de verdad**: deja el móvil cerca del piano, cuenta atrás de un compás y toca la melodía nota a nota. PitchCoach separa cada nota por el golpe de tecla (así distingue dos notas iguales seguidas) y la ajusta al tempo. No transcribe acordes.
   - Grabar **cantando**, o tocando el **piano de la pantalla** / el teclado del ordenador (`A W S E D F T G Y H U J K`, `Z`/`X` cambian de octava).
   - Escribir nota a nota: elige la duración (semicorchea… redonda), toca una tecla y la nota se añade en el cursor. Toca una nota para seleccionarla, arrástrala para moverla o estira su borde para alargarla.
   - **Letra** como texto normal (`can-ción`, salto de línea = frase nueva) que se reparte sola entre las notas, con contador de sílabas/notas.
@@ -38,9 +38,9 @@ La página de ejemplo es una app completa y responsive (móvil primero):
 <button id="go">Cantar</button>
 
 <script type="module">
-  import { Entona, loadSong } from './src/index.js';
+  import { PitchCoach, loadSong } from './src/index.js';
 
-  const game = new Entona(document.getElementById('stage'), { difficulty: 'normal' });
+  const game = new PitchCoach(document.getElementById('stage'), { difficulty: 'normal' });
   game.load(await loadSong('songs/mi-cancion.mid'));
 
   document.getElementById('go').onclick = () => game.start(); // pide el micrófono
@@ -65,7 +65,7 @@ La página de ejemplo es una app completa y responsive (móvil primero):
 | `melody` | MIDI: pista de la voz como `"pista:canal"` (ver `song.meta.candidates`) |
 | `title` | sobrescribe el título |
 
-### `new Entona(canvas, options?)`
+### `new PitchCoach(canvas, options?)`
 
 | opción | por defecto | |
 |---|---|---|
@@ -113,7 +113,7 @@ Pasa `canvas = null` para usar el motor sin gráficos.
 Todo está exportado por separado, así puedes montar otros juegos, por ejemplo **tarjetas de solfeo** del tipo «canta esta nota»:
 
 ```js
-import { PitchDetector, parsePitch, midiToName } from 'entona';
+import { PitchDetector, parsePitch, midiToName } from 'pitchcoach';
 
 const objetivo = parsePitch('Sol4');            // 67
 const det = new PitchDetector({ notation: 'solfege' });
@@ -141,11 +141,11 @@ await det.start();                              // micrófono; det.stop() para s
 | `Metronome` | metrónomo preciso con acentos por compás |
 | `NoteRecorder` | convierte en notas cuantizadas lo que llega de teclas (`noteOn/noteOff`), voz (`pitch`) o un instrumento real por micrófono (`instrument`) |
 | `splitLyrics`, `joinLyrics` | letra en texto ⇄ una sílaba por nota |
-| `draftToJSON`, `draftToMidi`, `songToDraft`, `writeMidi` | exportar canciones a JSON de Entona o MIDI con letra |
+| `draftToJSON`, `draftToMidi`, `songToDraft`, `writeMidi` | exportar canciones a JSON de PitchCoach o MIDI con letra |
 
 ## Formatos de canción
 
-Un MIDI normal no trae letra, así que Entona acepta varios formatos:
+Un MIDI normal no trae letra, así que PitchCoach acepta varios formatos:
 
 ### MIDI / KAR con letra
 - Letra en eventos **Lyric** (`FF 05`) en el mismo tick que cada nota, o eventos **Text** (`FF 01`) estilo `.kar` (`/` = nueva línea, `\` = párrafo, `@T` = título).
@@ -164,7 +164,7 @@ El formato de UltraStar/Vocaluxe/Performous; hay muchas canciones disponibles. `
 - 56
 ```
 
-### JSON de Entona (pensado para escribir a mano)
+### JSON de PitchCoach (pensado para escribir a mano)
 
 ```json
 {
@@ -184,7 +184,7 @@ Cada nota es `[altura, duración en pulsos, sílaba]`; `"r"` es silencio. Una s�
 
 ```
 src/             la librería (importa src/index.js)
-  game.js        clase Entona: orquesta todo
+  game.js        clase PitchCoach: orquesta todo
   pitch-detector.js, scorer.js, renderer.js, synth.js
   formats/       midi, ultrastar, json
 example/         página de ejemplo + canciones tradicionales de muestra

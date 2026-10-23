@@ -1,5 +1,5 @@
 /**
- * Entona JSON format, designed to be written by hand.
+ * PitchCoach JSON format, designed to be written by hand.
  *
  * Compact form: notes play one after another, lengths in beats.
  *   {

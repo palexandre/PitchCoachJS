@@ -1,8 +1,8 @@
 /**
- * Entona: the karaoke practice game. Glues together the song, the synth,
+ * PitchCoach: the karaoke practice game. Glues together the song, the synth,
  * the pitch detector, the scorer and the renderer.
  *
- *   const game = new Entona(canvas, { difficulty: 'normal' });
+ *   const game = new PitchCoach(canvas, { difficulty: 'normal' });
  *   game.load(await loadSong('cancion.mid'));
  *   await game.start();            // asks for the microphone
  *   game.on('end', (result) => console.log(result.grade, result.score));
@@ -26,7 +26,7 @@ const DEFAULTS = {
   streakStep: 2,          // seconds in tune per streak level
 };
 
-export class Entona extends Emitter {
+export class PitchCoach extends Emitter {
   /**
    * @param {HTMLCanvasElement|null} canvas null to run without graphics
    * @param {object} [opts] see DEFAULTS, plus renderer options (pixelsPerSecond, theme, labels, notation…)

@@ -179,7 +179,7 @@ function monophonic(notes) {
 }
 
 /**
- * Converts a MIDI file to an Entona raw song.
+ * Converts a MIDI file to an PitchCoach raw song.
  * @param {ArrayBuffer|Uint8Array} input
  * @param {{melody?: string, title?: string}} [opts] melody: candidate id "track:channel"
  */

@@ -1,4 +1,4 @@
-import { Entona, loadSong, midiToName, songToDraft, joinLyrics } from '../src/index.js';
+import { PitchCoach, loadSong, midiToName, songToDraft, joinLyrics } from '../src/index.js';
 import { readJSON, writeJSON, listImported, saveImported, deleteImported } from './store.js';
 import { SongEditor, emptyDraft } from './editor.js';
 
@@ -39,7 +39,7 @@ let mode = 'mic';    // 'mic' | 'demo'
 let audioCtx = null;
 const audio = () => (audioCtx ??= new AudioContext());
 
-const game = new Entona($('#stage'), { ...settings, hud: false, results: false, leadIn: 3 });
+const game = new PitchCoach($('#stage'), { ...settings, hud: false, results: false, leadIn: 3 });
 let returnTo = 'home'; // screen to go back to when leaving a game
 
 // =========================================================================

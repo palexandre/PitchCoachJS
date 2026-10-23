@@ -1,4 +1,4 @@
-export { Entona } from './game.js';
+export { PitchCoach } from './game.js';
 export { loadSong } from './load.js';
 export { finalizeSong } from './song.js';
 export { PitchDetector, yin } from './pitch-detector.js';

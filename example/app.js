@@ -239,6 +239,39 @@ function applyTheme(theme) {
 }
 applyTheme(settings.theme);
 
+// ---- versión ----------------------------------------------------------------------
+
+async function showVersion() {
+  let v = 'desarrollo';
+  try {
+    const key = (await caches.keys()).find((k) => k.startsWith('pitchcoach-') && k !== 'pitchcoach-fonts');
+    if (key) v = key.replace('pitchcoach-', '');
+  } catch { /* sin caché */ }
+  $('#app-version').textContent = `Versión ${v}`;
+}
+
+$('#check-update').addEventListener('click', async () => {
+  const btn = $('#check-update');
+  if (!swReg) return toast('En este navegador la app no se guarda para usar sin conexión: siempre tienes la última versión');
+  btn.disabled = true;
+  btn.textContent = 'Buscando…';
+  try {
+    await swReg.update();
+    const found = swReg.installing ?? swReg.waiting;
+    if (!found) return toast('Ya tienes la última versión');
+    toast('Descargando la versión nueva…');
+    if (found.state !== 'installed') {
+      await new Promise((resolve) => found.addEventListener('statechange', () => found.state === 'installed' && resolve()));
+    }
+    applyUpdate(found);
+  } catch {
+    toast('No se pudo comprobar. ¿Tienes conexión?', true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Buscar actualizaciones';
+  }
+});
+
 // ---- tus datos ------------------------------------------------------------------
 
 function plural(n, one, many) {
@@ -328,6 +361,7 @@ function openSettings() {
 
 function syncSettingsUI() {
   syncDataUI();
+  showVersion();
   document.querySelectorAll('.segmented[data-setting]').forEach((seg) => {
     const key = seg.dataset.setting;
     seg.querySelectorAll('button').forEach((b) => b.setAttribute('aria-checked', String(String(settings[key]) === b.dataset.value)));
@@ -469,6 +503,7 @@ function exitGame({ fromHistory = false } = {}) {
     ignorePop = true;
     history.back();
   }
+  setTimeout(maybeApplyUpdate, 300);
 }
 
 function pauseGame() {
@@ -575,6 +610,7 @@ const editor = new SongEditor({
   onExit() {
     showScreen('home');
     renderLibrary();
+    setTimeout(maybeApplyUpdate, 300);
     if (history.state?.editor) {
       ignorePop = true;
       history.back();
@@ -882,6 +918,8 @@ function closeAllDialogs() {
   });
 }
 
+document.querySelectorAll('dialog').forEach((d) => d.addEventListener('close', () => setTimeout(maybeApplyUpdate, 300)));
+
 document.querySelectorAll('dialog.modal [data-close]').forEach((b) => b.addEventListener('click', () => closeDialog(b.closest('dialog'))));
 
 document.querySelectorAll('dialog.sheet').forEach((d) => {
@@ -943,24 +981,46 @@ const ready = initLibrary();
 // En local (desarrollo) no se registra, para no servir archivos antiguos de la caché;
 // añade ?sw a la URL para probarlo.
 const isLocal = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
-let updating = false; // solo se recarga cuando el usuario pide la versión nueva
+let updating = false; // solo se recarga al aplicar una versión nueva, no en la primera instalación
+let swReg = null;
+let waitingWorker = null;
+
+// Se puede actualizar sin molestar si estás en la biblioteca sin nada abierto.
+const canUpdateNow = () => isHome() && !document.querySelector('dialog[open]') && game.state !== 'playing';
+
+function applyUpdate(worker = waitingWorker) {
+  if (!worker || updating) return;
+  updating = true;
+  worker.postMessage('skipWaiting');
+}
+
+/** Llamar al volver a la biblioteca: aplica una versión pendiente. */
+function maybeApplyUpdate() {
+  if (waitingWorker && canUpdateNow()) applyUpdate();
+}
+
+const offerUpdate = (worker) => {
+  waitingWorker = worker;
+  if (canUpdateNow()) return applyUpdate(worker);
+  // cantando o editando: se avisa y se aplica al volver a la biblioteca
+  $('#update-bar').hidden = false;
+  $('#update-btn').onclick = () => {
+    $('#update-btn').disabled = true;
+    applyUpdate(worker);
+  };
+};
+
 if ('serviceWorker' in navigator && (!isLocal || new URLSearchParams(location.search).has('sw'))) {
   navigator.serviceWorker.register('sw.js').then((reg) => {
-    const offerUpdate = (worker) => {
-      $('#update-bar').hidden = false;
-      $('#update-btn').onclick = () => {
-        $('#update-btn').disabled = true;
-        updating = true;
-        worker.postMessage('skipWaiting');
-      };
+    swReg = reg;
+    // una versión nueva puede estar ya esperando o descargándose al abrir la app
+    const track = (w) => {
+      if (!w || !navigator.serviceWorker.controller) return;
+      if (w.state === 'installed') return offerUpdate(w);
+      w.addEventListener('statechange', () => w.state === 'installed' && offerUpdate(w));
     };
-    if (reg.waiting && navigator.serviceWorker.controller) offerUpdate(reg.waiting);
-    reg.addEventListener('updatefound', () => {
-      const w = reg.installing;
-      w?.addEventListener('statechange', () => {
-        if (w.state === 'installed' && navigator.serviceWorker.controller) offerUpdate(w);
-      });
-    });
+    track(reg.waiting ?? reg.installing);
+    reg.addEventListener('updatefound', () => track(reg.installing));
     // busca versiones nuevas al volver a la app
     document.addEventListener('visibilitychange', () => !document.hidden && reg.update().catch(() => {}));
   }).catch(() => { /* sin service worker la app funciona igual, solo que no sin conexión */ });

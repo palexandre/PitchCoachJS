@@ -1,6 +1,7 @@
 import { PitchCoach, loadSong, midiToName, songToDraft, joinLyrics, draftToJSON, draftToMidi, songToWav } from '../src/index.js';
 import { readJSON, writeJSON, removeJSON, clearAllJSON, listImported, saveImported, deleteImported, clearImported } from './store.js';
 import { SongEditor, emptyDraft, EDITOR_DEFAULTS } from './editor.js';
+import { lightColor } from './theme.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -18,7 +19,7 @@ const DEFAULT_SETTINGS = {
   accompanimentVolume: 0.18,
   latency: 0.06,
   notation: 'solfege',
-  theme: 'invertido',
+  theme: 'claro',
 };
 const DIFFICULTY_TEXT = {
   facil: ['Fácil', 'Margen de ±1 semitono'],
@@ -28,6 +29,8 @@ const DIFFICULTY_TEXT = {
 const FORMAT_TEXT = { midi: 'MIDI', ultrastar: 'UltraStar', json: 'JSON' };
 
 const settings = readJSON('settings', DEFAULT_SETTINGS);
+// versiones anteriores tenían «original» e «invertido»
+settings.theme = settings.theme === 'original' || settings.theme === 'oscuro' ? 'oscuro' : 'claro';
 const perSong = readJSON('per-song', {}); // { id: { transpose, melody } }
 const best = readJSON('best', {});        // { id: { score, grade, stars } }
 
@@ -105,10 +108,8 @@ function renderLibrary() {
 function coverHTML(title) {
   let h = 0;
   for (const ch of title) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  let hue = h % 360;
-  let [l1, l2] = [42, 62];
-  if (settings.theme === 'invertido') [hue, l1, l2] = [(hue + 180) % 360, 100 - l1, 100 - l2]; // color complementario
-  return `<span class="cover" aria-hidden="true" style="--c1: hsl(${hue} 65% ${l1}%); --c2: hsl(${(hue + 150) % 360} 80% ${l2}%)"></span>`;
+  const hue = h % 360;
+  return `<span class="cover" aria-hidden="true" style="--c1: hsl(${hue} 65% 42%); --c2: hsl(${(hue + 150) % 360} 80% 62%)"></span>`;
 }
 
 function starsText(stars) {
@@ -235,14 +236,14 @@ document.querySelectorAll('[data-open-help]').forEach((b) => b.addEventListener(
 // ---- aspecto ---------------------------------------------------------------------
 
 function applyTheme(theme) {
-  const inverted = theme === 'invertido';
+  const map = theme === 'claro' ? lightColor : null;
   document.documentElement.dataset.theme = theme;
-  game.set({ invertColors: inverted });
-  editor.invertColors = inverted;
+  game.set({ colorMap: map });
+  editor.colorMap = map;
   editor.draw();
   renderLibrary();
-  // la barra del sistema en el móvil también se invierte
-  $('meta[name="theme-color"]').content = theme === 'invertido' ? '#e8f9bf' : '#170640';
+  // la barra del sistema en el móvil sigue al tema
+  $('meta[name="theme-color"]').content = theme === 'claro' ? '#f6f3fb' : '#170640';
 }
 
 // ---- versión ----------------------------------------------------------------------

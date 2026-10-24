@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#170640">
+  <meta name="theme-color" content="#f6f3fb">
   <script>
     // Aplica el tema antes de pintar, para que no haya un destello del otro.
     try {
       const s = JSON.parse(localStorage.getItem('pitchcoach:settings') || '{}');
-      document.documentElement.dataset.theme = s.theme || 'invertido';
-    } catch { document.documentElement.dataset.theme = 'invertido'; }
+      document.documentElement.dataset.theme = s.theme === 'original' || s.theme === 'oscuro' ? 'oscuro' : 'claro';
+    } catch { document.documentElement.dataset.theme = 'claro'; }
   </script>
   <meta name="description" content="Karaoke que te escucha: canta, afina y suma estrellas. Crea tus canciones tocando el piano o cantando.">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -438,10 +438,10 @@
       <div class="group">
         <h3>Aspecto</h3>
         <div class="setting">
-          <div class="setting-label"><span>Colores</span><small>Invertido: todos los colores al revés</small></div>
-          <div class="segmented" data-setting="theme" role="radiogroup" aria-label="Colores">
-            <button role="radio" data-value="original">Original</button>
-            <button role="radio" data-value="invertido">Invertido</button>
+          <div class="setting-label"><span>Tema</span><small>Claro u oscuro</small></div>
+          <div class="segmented" data-setting="theme" role="radiogroup" aria-label="Tema">
+            <button role="radio" data-value="claro">Claro</button>
+            <button role="radio" data-value="oscuro">Oscuro</button>
           </div>
         </div>
       </div>

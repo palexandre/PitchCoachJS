@@ -14,7 +14,7 @@ export { draftToJSON, draftToMidi, songToDraft } from './formats/export.js';
 export { writeMidi } from './formats/midi-writer.js';
 export { songToWav, encodeWav } from './formats/audio.js';
 export { Emitter } from './emitter.js';
-export { invertColor, invertibleContext } from './colors.js';
+export { invertColor, invertibleContext, themedContext } from './colors.js';
 export { parseMidi, midiToSong } from './formats/midi.js';
 export { ultrastarToSong } from './formats/ultrastar.js';
 export { jsonToSong } from './formats/json.js';

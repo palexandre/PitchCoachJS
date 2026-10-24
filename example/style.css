@@ -1,6 +1,6 @@
 /* ---------- paleta ----------
-   Cada color es una variable "r, g, b". El tema invertido usa el
-   complementario exacto de cada uno (255 − r, 255 − g, 255 − b). */
+   Cada color es una variable "r, g, b". El tema oscuro usa estos valores;
+   el claro los sustituye por los de la tabla de example/theme.js. */
 :root {
   --c-000000: 0, 0, 0;
   --c-08021c: 8, 2, 28;
@@ -28,33 +28,41 @@
   --c-ffcf4a: 255, 207, 74;
   --c-ffffff: 255, 255, 255;
 }
-html[data-theme="invertido"] {
-  --c-000000: 255, 255, 255;
-  --c-08021c: 247, 253, 227;
-  --c-0d0430: 242, 251, 207;
-  --c-12042f: 237, 251, 208;
-  --c-14043c: 235, 251, 195;
-  --c-170640: 232, 249, 191;
-  --c-1d0b45: 226, 244, 186;
-  --c-1e0a46: 225, 245, 185;
-  --c-1fd1b5: 224, 46, 74;
-  --c-22095a: 221, 246, 165;
-  --c-2a0f68: 213, 240, 151;
-  --c-2b0d6e: 212, 242, 145;
-  --c-34157c: 203, 234, 131;
-  --c-3be5ca: 196, 26, 53;
-  --c-3d1394: 194, 236, 107;
-  --c-43e08c: 188, 31, 115;
-  --c-4da3ff: 178, 92, 0;
-  --c-5b2bd6: 164, 212, 41;
-  --c-6f5cff: 144, 163, 0;
-  --c-f6f0df: 9, 15, 32;
-  --c-ff5c7c: 0, 163, 131;
-  --c-ff7a8a: 0, 133, 117;
-  --c-ff9d4a: 0, 98, 181;
-  --c-ffcf4a: 0, 48, 181;
-  --c-ffffff: 0, 0, 0;
+html[data-theme="claro"] {
+  color-scheme: light;
+  --c-000000: 45, 27, 92;
+  --c-08021c: 29, 11, 69;
+  --c-0d0430: 255, 255, 255;
+  --c-12042f: 235, 229, 244;
+  --c-14043c: 255, 255, 255;
+  --c-170640: 246, 243, 251;
+  --c-1d0b45: 42, 26, 82;
+  --c-1e0a46: 30, 10, 70;
+  --c-1fd1b5: 14, 165, 143;
+  --c-22095a: 241, 236, 248;
+  --c-2a0f68: 255, 255, 255;
+  --c-2b0d6e: 244, 240, 251;
+  --c-34157c: 255, 255, 255;
+  --c-3be5ca: 18, 184, 159;
+  --c-3d1394: 230, 220, 251;
+  --c-43e08c: 31, 157, 90;
+  --c-4da3ff: 26, 115, 232;
+  --c-5b2bd6: 91, 43, 214;
+  --c-6f5cff: 111, 92, 255;
+  --c-f6f0df: 29, 11, 69;
+  --c-ff5c7c: 224, 51, 79;
+  --c-ff7a8a: 217, 58, 82;
+  --c-ff9d4a: 232, 116, 31;
+  --c-ffcf4a: 201, 138, 0;
+  --c-ffffff: 29, 11, 69;
 }
+/* teclado del editor en el tema claro: teclas blancas de verdad */
+html[data-theme="claro"] .ed-keys {
+  --ek-white: #ffffff; --ek-black: #2a1a52; --ek-active: #0ea58f; --ek-hint: #f2b705;
+  --ek-label: rgba(30, 10, 70, 0.45); --ek-label-c: rgba(30, 10, 70, 0.85);
+}
+html[data-theme="claro"] .switch::after { background: #ffffff; } /* el botón del interruptor sigue blanco */
+html[data-theme="claro"] .ek-white { box-shadow: inset 0 -6px 0 rgba(45, 27, 92, 0.1), 0 0 0 1px rgba(45, 27, 92, 0.12); }
 
 :root {
   --bg: rgb(var(--c-170640));

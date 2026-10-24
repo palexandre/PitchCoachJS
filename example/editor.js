@@ -2,7 +2,7 @@
 // real-time recording (piano or voice), lyrics and export.
 import {
   Piano, PianoKeyboard, NoteRecorder, PitchDetector,
-  splitLyrics, midiToName, draftToJSON, invertibleContext,
+  splitLyrics, midiToName, draftToJSON, themedContext,
 } from '../src/index.js';
 import { readJSON, writeJSON } from './store.js';
 
@@ -52,8 +52,8 @@ export class SongEditor {
     this.root = o.root;
     this.$ = (s) => this.root.querySelector(s);
     this.canvas = this.$('#ed-roll');
-    this.invertColors = false;
-    this.g = invertibleContext(this.canvas.getContext('2d'), () => this.invertColors);
+    this.colorMap = null; // traduce los colores al tema claro
+    this.g = themedContext(this.canvas.getContext('2d'), () => this.colorMap);
 
     const prefs = readJSON('editor-prefs', { ...EDITOR_DEFAULTS });
     this.prefs = prefs;

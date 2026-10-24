@@ -31,13 +31,15 @@ test('al instalar una versión nueva se descargan los archivos del servidor, no 
   assert.match(sw, /cache: 'reload'/);
 });
 
-test('los estilos no usan filtros para invertir: cada color tiene su variable invertida', () => {
+test('el tema claro de los estilos coincide con la tabla de theme.js', async () => {
   const css = readFileSync(new URL('style.css', example), 'utf8');
   assert.doesNotMatch(css, /filter:\s*invert/);
-  const vars = [...css.matchAll(/--c-([0-9a-f]{6}): (\d+), (\d+), (\d+);/g)];
-  const byName = new Map();
-  for (const [, name, r, g, b] of vars) (byName.get(name) ?? byName.set(name, []).get(name)).push([+r, +g, +b]);
-  for (const [name, [orig, inv]] of byName) {
-    assert.deepEqual(inv, orig.map((v) => 255 - v), name);
+  const { LIGHT } = await import('../example/theme.js');
+  const block = /html\[data-theme="claro"\] \{([\s\S]*?)\}/.exec(css)[1];
+  const vars = [...block.matchAll(/--c-([0-9a-f]{6}): (\d+), (\d+), (\d+);/g)];
+  assert.ok(vars.length >= 20);
+  for (const [, name, r, g, b] of vars) {
+    const hex = [r, g, b].map((v) => Number(v).toString(16).padStart(2, '0')).join('');
+    assert.equal(hex, LIGHT[name], name);
   }
 });

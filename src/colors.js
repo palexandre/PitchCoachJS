@@ -1,6 +1,6 @@
 /**
- * Utilidades de color para dibujar en canvas con los colores invertidos
- * (tema «invertido») sin tocar el código que dibuja.
+ * Utilidades de color para dibujar en canvas con otro tema (claro, invertido…)
+ * sin tocar el código que dibuja.
  */
 
 /** Invierte un color CSS: #rgb, #rrggbb, rgb() o rgba(). Otros valores se devuelven tal cual. */
@@ -23,20 +23,25 @@ export function invertColor(color) {
 }
 
 /**
- * Hace que un contexto 2D invierta los colores que se le asignan mientras
- * `enabled()` sea verdadero: fillStyle, strokeStyle, shadowColor y los
- * colores de los degradados.
+ * Hace que un contexto 2D traduzca los colores que se le asignan con la
+ * función que devuelva `getMap()` (o los deje tal cual si devuelve null):
+ * fillStyle, strokeStyle, shadowColor y los colores de los degradados.
+ * Sirve para dibujar el mismo código con otro tema (claro, invertido…).
  * @param {CanvasRenderingContext2D} ctx
- * @param {() => boolean} enabled
+ * @param {() => ((color: string) => string) | null} getMap
  */
-export function invertibleContext(ctx, enabled) {
+export function themedContext(ctx, getMap) {
+  const map = (v) => {
+    const f = getMap();
+    return f ? f(v) : v;
+  };
   const proto = Object.getPrototypeOf(ctx);
   for (const prop of ['fillStyle', 'strokeStyle', 'shadowColor']) {
     const desc = Object.getOwnPropertyDescriptor(proto, prop);
     Object.defineProperty(ctx, prop, {
       configurable: true,
       get() { return desc.get.call(this); },
-      set(v) { desc.set.call(this, enabled() ? invertColor(v) : v); },
+      set(v) { desc.set.call(this, map(v)); },
     });
   }
   for (const fn of ['createLinearGradient', 'createRadialGradient']) {
@@ -44,9 +49,14 @@ export function invertibleContext(ctx, enabled) {
     ctx[fn] = (...args) => {
       const grad = orig(...args);
       const add = grad.addColorStop.bind(grad);
-      grad.addColorStop = (offset, color) => add(offset, enabled() ? invertColor(color) : color);
+      grad.addColorStop = (offset, color) => add(offset, map(color));
       return grad;
     };
   }
   return ctx;
+}
+
+/** Atajo: invierte todos los colores mientras `enabled()` sea verdadero. */
+export function invertibleContext(ctx, enabled) {
+  return themedContext(ctx, () => (enabled() ? invertColor : null));
 }

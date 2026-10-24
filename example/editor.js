@@ -1,8 +1,8 @@
 // Song editor for the example app: piano roll, on-screen piano, step entry,
 // real-time recording (piano or voice), lyrics and export.
 import {
-  Piano, Metronome, PianoKeyboard, NoteRecorder, PitchDetector,
-  splitLyrics, midiToName, draftToJSON, draftToMidi,
+  Piano, PianoKeyboard, NoteRecorder, PitchDetector,
+  splitLyrics, midiToName, draftToJSON,
 } from '../src/index.js';
 import { readJSON, writeJSON } from './store.js';
 
@@ -267,7 +267,6 @@ export class SongEditor {
     const ctx = this.o.audio();
     if (ctx.state === 'suspended') ctx.resume();
     this.piano ??= new Piano(ctx, ctx.destination, { volume: 0.7 });
-    this.metro ??= new Metronome(ctx, ctx.destination, { volume: 0.35 });
     return ctx;
   }
 
@@ -280,6 +279,7 @@ export class SongEditor {
     const ctx = this._audio();
     this.piano.noteOn(midi, { velocity: 0.8 });
     if (this.mode === 'recording' || this.mode === 'countin') {
+      this.lastKey = midi;
       if (this.recSource === 'keys' && ctx.currentTime >= this.recStart - (30 / this.draft.bpm)) {
         this.recorder.noteOn(midi, Math.max(ctx.currentTime, this.recStart));
       }
@@ -311,10 +311,6 @@ export class SongEditor {
       if (n.beat < from - 1e-6) continue;
       this.piano.play(n.midi, { when: t0 + (n.beat - from) * spb, duration: n.length * spb * 0.96 });
     }
-    if (this.prefs.metronome) {
-      const first = Math.ceil(from - 1e-6);
-      this.metro.start({ bpm: this.draft.bpm, beatsPerBar: this.draft.beatsPerBar, when: t0 + (first - from) * spb, firstBeat: first });
-    }
     this.mode = 'playing';
     this.playFrom = { t0, beat: from };
     this._syncUI();
@@ -325,7 +321,6 @@ export class SongEditor {
     if (this.mode === 'recording' || this.mode === 'countin') return this.stopRecording();
     if (this.mode !== 'playing') return;
     this.piano?.stopAll();
-    this.metro?.stop();
     this.keyboard.clearHighlights();
     this.mode = 'idle';
     this._syncUI();
@@ -358,10 +353,7 @@ export class SongEditor {
     this.recStartBeat = startBeat;
     this.recorder = new NoteRecorder({ bpm: this.draft.bpm, startTime: this.recStart, startBeat, grid: this.prefs.grid });
     this.recPreview = [];
-    this.metro.start({ bpm: this.draft.bpm, beatsPerBar: bpb, when: this.recStart - bpb * spb, firstBeat: startBeat - bpb });
-    // with the microphone open, clicks would be recorded as notes: the beat becomes visual
-    const audible = source === 'keys' && this.prefs.metronome;
-    this._metroMute = setTimeout(() => { if (this.metro) this.metro.audible = audible; }, (this.recStart - ctx.currentTime - 0.05) * 1000);
+    this.lastKey = null;
     this.mode = 'countin';
     this._syncUI();
     this._loop();
@@ -369,8 +361,6 @@ export class SongEditor {
 
   stopRecording() {
     const ctx = this.o.audio();
-    clearTimeout(this._metroMute);
-    this.metro.stop();
     this.detector?.stop();
     this.detector = null;
     this.live = null;
@@ -386,8 +376,10 @@ export class SongEditor {
         this.cursor = to;
         this.view.scroll = Math.max(-0.25, from - 1); // show what was just recorded
       });
+      this.view.top = Math.round(this.view.top);
       this.o.toast(`${recorded.length} ${recorded.length === 1 ? 'nota grabada' : 'notas grabadas'}`);
     } else {
+      this.view.top = Math.round(this.view.top);
       this._syncUI();
       this.draw();
       this.o.toast('No se ha grabado ninguna nota');
@@ -424,6 +416,7 @@ export class SongEditor {
           }
         }
         if (this.mode === 'recording') this.recPreview = this.recorder.preview(now);
+        this._followPitch(this.live ?? this.lastKey ?? this.recPreview.at(-1)?.midi);
       }
       this._follow(this.playhead);
       this.draw();
@@ -492,6 +485,16 @@ export class SongEditor {
     this.draw();
   }
 
+  /** Keeps the note being sung or played in the middle of the roll while recording. */
+  _followPitch(midi) {
+    if (midi == null) return;
+    const rows = (this.height - RULER_H) / this.view.rowH;
+    const pos = (this.view.top - midi) / rows; // 0 = top edge, 1 = bottom edge
+    if (pos > 0.3 && pos < 0.7) return;
+    const target = clamp(midi + rows / 2, MIN_MIDI + 8, MAX_MIDI);
+    this.view.top += (target - this.view.top) * (pos < 0.08 || pos > 0.92 ? 0.35 : 0.12);
+  }
+
   _follow(beat) {
     const x = this.x(beat);
     if (x > this.width * 0.7) this.view.scroll = beat - (this.width * 0.3 - LABEL_W) / this.view.ppb;
@@ -509,7 +512,7 @@ export class SongEditor {
 
     // pitch rows
     const lo = Math.floor(this.midiAt(h)) - 1;
-    for (let m = view.top + 1; m >= lo; m--) {
+    for (let m = Math.ceil(view.top) + 1; m >= lo; m--) {
       const y = this.y(m) - view.rowH / 2;
       if (BLACK.has(m % 12)) {
         g.fillStyle = COLORS.rowBlack;
@@ -519,6 +522,14 @@ export class SongEditor {
         g.fillStyle = COLORS.rowC;
         g.fillRect(LABEL_W, y + view.rowH - 1, w, 1);
       }
+    }
+
+    // the row of the note you are singing or playing, so you never lose it
+    const recording = this.mode === 'recording' || this.mode === 'countin';
+    const current = recording ? this.live ?? (this.recSource === 'keys' ? this.lastKey : null) : null;
+    if (current != null) {
+      g.fillStyle = 'rgba(67,224,140,0.14)';
+      g.fillRect(LABEL_W, this.y(Math.round(current)) - view.rowH / 2, w, view.rowH);
     }
 
     // beat & bar lines
@@ -548,11 +559,24 @@ export class SongEditor {
     } else {
       g.fillStyle = this.mode === 'playing' ? COLORS.playhead : '#ff6b8b';
       g.fillRect(Math.round(this.x(ph)) - 1, RULER_H, 2, h - RULER_H);
-      if (this.live != null) {
+      if (current != null) {
+        const px = this.x(ph);
+        const py = this.y(current);
         g.fillStyle = COLORS.pitch;
         g.beginPath();
-        g.arc(this.x(ph), this.y(this.live), 7, 0, Math.PI * 2);
+        g.arc(px, py, 7, 0, Math.PI * 2);
         g.fill();
+        // note name next to the dot
+        const name = midiToName(Math.round(current), { notation: this.o.notation() });
+        g.font = '900 13px Nunito, system-ui, sans-serif';
+        const tw = g.measureText(name).width;
+        const lx = px + 14 + tw + 12 > w ? px - 14 - tw - 12 : px + 14;
+        g.fillStyle = COLORS.pitch;
+        roundRect(g, lx, py - 11, tw + 12, 22, 11);
+        g.fill();
+        g.fillStyle = COLORS.noteText;
+        g.textAlign = 'left';
+        g.fillText(name, lx + 6, py + 0.5);
       }
     }
 
@@ -574,16 +598,22 @@ export class SongEditor {
     g.lineTo(cx, RULER_H);
     g.fill();
 
-    // visual metronome and input level while recording
-    if (this.mode === 'recording') {
-      const frac = this.playhead - Math.floor(this.playhead);
-      const accent = Math.floor(this.playhead) % bpb === 0;
-      g.globalAlpha = Math.max(0, 1 - frac * 3);
+    // visual metronome (silent): the ruler flashes on every beat, stronger on the first of the bar
+    if (this.prefs.metronome && (this.mode === 'playing' || recording)) {
+      const beat = Math.floor(this.playhead);
+      const frac = this.playhead - beat;
+      const accent = (((beat % bpb) + bpb) % bpb) === 0;
+      const k = Math.max(0, 1 - frac * 3);
+      g.globalAlpha = k * (accent ? 0.35 : 0.18);
       g.fillStyle = accent ? COLORS.selected : '#ffffff';
+      g.fillRect(LABEL_W, 0, w, RULER_H);
+      g.globalAlpha = k;
       g.beginPath();
       g.arc(w - 16, RULER_H / 2, accent ? 7 : 5, 0, Math.PI * 2);
       g.fill();
       g.globalAlpha = 1;
+    }
+    if (this.mode === 'recording') {
       if (this.detector) {
         const lv = Math.min(1, Math.sqrt((this.level ?? 0) / 0.25));
         g.fillStyle = 'rgba(255,255,255,0.15)';
@@ -597,7 +627,7 @@ export class SongEditor {
     g.fillStyle = COLORS.ruler;
     g.fillRect(0, RULER_H, LABEL_W, h - RULER_H);
     g.font = '700 10px Nunito, system-ui, sans-serif';
-    for (let m = view.top; m >= lo; m--) {
+    for (let m = Math.ceil(view.top); m >= lo; m--) {
       if (BLACK.has(m % 12)) continue;
       const isC = m % 12 === 0;
       if (!isC && view.rowH < 14 && m % 12 !== 7) continue;
@@ -611,6 +641,12 @@ export class SongEditor {
       const left = Math.ceil((this.recStart - ctx.currentTime) / (60 / this.draft.bpm));
       g.fillStyle = 'rgba(23,6,64,0.55)';
       g.fillRect(LABEL_W, RULER_H, w, h);
+      const frac = this.playhead - Math.floor(this.playhead);
+      g.strokeStyle = `rgba(255,255,255,${Math.max(0, 0.6 - frac * 0.8)})`;
+      g.lineWidth = 4;
+      g.beginPath();
+      g.arc((w + LABEL_W) / 2, (h + RULER_H) / 2, 52 + frac * 26, 0, Math.PI * 2);
+      g.stroke();
       g.textAlign = 'center';
       g.font = '900 72px Nunito, system-ui, sans-serif';
       g.fillStyle = '#fff';
@@ -895,6 +931,7 @@ export class SongEditor {
     $('#ed-rest').addEventListener('click', () => this.insertRest());
     $('#ed-tempo-chip').addEventListener('click', () => this.openMenu());
     $('#ed-more').addEventListener('click', () => this.openMenu());
+    $('#ed-export').addEventListener('click', () => this.exportSong());
     $('#ed-zoom-in').addEventListener('click', () => this.zoom(1.25));
     $('#ed-zoom-out').addEventListener('click', () => this.zoom(0.8));
     $('#ed-oct-down').addEventListener('click', () => this.keyboard.shiftOctave(-1));
@@ -988,10 +1025,9 @@ export class SongEditor {
         this.stop();
         this.o.onTry(this.toJSON());
       }
-      if (a === 'json') download(`${fileName(this.draft.title)}.json`, JSON.stringify(this.toJSON(), null, 2), 'application/json');
-      if (a === 'midi') {
-        const syl = splitLyrics(this.draft.lyricsText);
-        download(`${fileName(this.draft.title)}.mid`, draftToMidi({ ...this.draft, notes: this.notes.map((n, i) => ({ ...n, lyric: syl[i] ?? '' })) }), 'audio/midi');
+      if (a === 'export') {
+        this.o.closeDialog($('#ed-menu'));
+        this.exportSong();
       }
       if (a === 'clear') {
         this.o.closeDialog($('#ed-menu'));
@@ -1019,6 +1055,13 @@ export class SongEditor {
         this.o.onExit();
       }
     });
+  }
+
+  /** Exports what is in the editor right now, saved or not. */
+  exportSong() {
+    if (!this.notes.length) return this.o.toast('Añade alguna nota antes de exportar', true);
+    this.stop();
+    this.o.onExport(this.toJSON());
   }
 
   openMenu() {
@@ -1111,19 +1154,4 @@ function clamp(v, a, b) {
 function roundRect(g, x, y, w, h, r) {
   g.beginPath();
   g.roundRect ? g.roundRect(x, y, w, h, r) : g.rect(x, y, w, h);
-}
-
-function fileName(title) {
-  return (title || 'mi-cancion').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'mi-cancion';
-}
-
-function download(name, data, type) {
-  const url = URL.createObjectURL(new Blob([data], { type }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  document.body.append(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
 }

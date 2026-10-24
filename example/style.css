@@ -536,3 +536,9 @@ kbd, code { padding: 1px 6px; border-radius: 6px; background: rgba(255, 255, 255
 @media (display-mode: standalone) {
   .home-header { padding-top: 4px; }
 }
+
+/* exportar */
+.sheet-head-text { flex: 1; min-width: 0; }
+.sheet-head-text h2 { overflow-wrap: anywhere; }
+.rec-option.busy { opacity: 0.6; pointer-events: none; }
+.rec-option.busy small::after { content: ' · preparando…'; color: var(--accent); }

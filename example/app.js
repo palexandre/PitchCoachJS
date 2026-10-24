@@ -1,4 +1,4 @@
-import { PitchCoach, loadSong, midiToName, songToDraft, joinLyrics } from '../src/index.js';
+import { PitchCoach, loadSong, midiToName, songToDraft, joinLyrics, draftToJSON, draftToMidi, songToWav } from '../src/index.js';
 import { readJSON, writeJSON, listImported, saveImported, deleteImported } from './store.js';
 import { SongEditor, emptyDraft } from './editor.js';
 
@@ -481,7 +481,84 @@ const editor = new SongEditor({
     }
   },
   onDelete: (id) => removeSong(id),
+  async onExport(json) {
+    openExport({ song: await loadSong(json), json });
+  },
 });
+
+// =========================================================================
+// Exportar: MIDI con letra, audio WAV o JSON
+// =========================================================================
+
+let exportTarget = null;
+
+function openExport({ song, json = null }) {
+  exportTarget = { song, json };
+  $('#export-song').textContent = `«${song.title}» · ${song.notes.length} notas`;
+  openDialog($('#export'));
+}
+
+$('#export-btn').addEventListener('click', () => {
+  let json = null;
+  if (current.own) {
+    try {
+      json = JSON.parse(new TextDecoder().decode(current.source));
+    } catch { /* se genera de nuevo */ }
+  }
+  openExport({ song: current.song, json });
+});
+
+$('#export').addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-format]');
+  if (!btn || !exportTarget) return;
+  const { song, json } = exportTarget;
+  const base = fileName(song.title);
+  btn.classList.add('busy');
+  try {
+    let file;
+    if (btn.dataset.format === 'midi') {
+      file = new File([draftToMidi(songToDraft(song))], `${base}.mid`, { type: 'audio/midi' });
+    } else if (btn.dataset.format === 'wav') {
+      file = new File([await songToWav(song)], `${base}.wav`, { type: 'audio/wav' });
+    } else {
+      const data = json ?? { ...draftToJSON(songToDraft(song)), lyricsText: joinLyrics(song.notes) };
+      file = new File([JSON.stringify(data, null, 2)], `${base}.json`, { type: 'application/json' });
+    }
+    closeDialog($('#export'));
+    await deliver(file);
+  } catch (err) {
+    toast(`No se pudo exportar: ${err.message}`, true);
+  } finally {
+    btn.classList.remove('busy');
+  }
+});
+
+/** En el móvil abre el menú de compartir (guardar en Archivos, enviar…); en el ordenador descarga. */
+async function deliver(file) {
+  const touch = matchMedia('(pointer: coarse)').matches;
+  if (touch && navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: file.name });
+      return;
+    } catch (err) {
+      if (err.name === 'AbortError') return; // el usuario cerró el menú
+    }
+  }
+  const url = URL.createObjectURL(file);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = file.name;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  toast(`Descargado: ${file.name}`);
+}
+
+function fileName(title) {
+  return (title || 'mi-cancion').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'mi-cancion';
+}
 
 function showEditor() {
   closeAllDialogs();

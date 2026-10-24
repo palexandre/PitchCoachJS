@@ -80,3 +80,17 @@ test('NoteRecorder.instrument: piano through the mic splits repeated notes on ea
   assert.deepEqual(notes.map((n) => [n.beat, n.midi]), [[0, 60], [1, 60], [2, 67]]);
   assert.ok(notes[2].length >= 1);
 });
+
+test('encodeWav genera un WAV PCM de 16 bits válido', async () => {
+  const { encodeWav } = await import('../src/index.js');
+  const left = Float32Array.from({ length: 100 }, (_, i) => Math.sin(i / 5));
+  const wav = encodeWav([left, left], 44100);
+  const v = new DataView(wav.buffer);
+  const str = (o, n) => String.fromCharCode(...wav.subarray(o, o + n));
+  assert.equal(str(0, 4), 'RIFF');
+  assert.equal(str(8, 4), 'WAVE');
+  assert.equal(v.getUint16(22, true), 2);
+  assert.equal(v.getUint32(24, true), 44100);
+  assert.equal(v.getUint32(40, true), 100 * 2 * 2);
+  assert.equal(wav.length, 44 + 400);
+});

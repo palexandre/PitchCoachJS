@@ -12,6 +12,7 @@ export { NoteRecorder, segmentsToNotes, quantize } from './recorder.js';
 export { splitLyrics, joinLyrics, countSyllables } from './lyrics.js';
 export { draftToJSON, draftToMidi, songToDraft } from './formats/export.js';
 export { writeMidi } from './formats/midi-writer.js';
+export { songToWav, encodeWav } from './formats/audio.js';
 export { Emitter } from './emitter.js';
 export { parseMidi, midiToSong } from './formats/midi.js';
 export { ultrastarToSong } from './formats/ultrastar.js';

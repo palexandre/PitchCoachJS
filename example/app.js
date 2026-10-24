@@ -226,6 +226,10 @@ async function removeSong(id) {
 // Settings
 // =========================================================================
 
+// ---- ayuda ------------------------------------------------------------------------
+
+document.querySelectorAll('[data-open-help]').forEach((b) => b.addEventListener('click', () => openDialog($('#scoring-help'))));
+
 // ---- aspecto ---------------------------------------------------------------------
 
 function applyTheme(theme) {

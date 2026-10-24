@@ -116,10 +116,39 @@ Pasa `canvas = null` para usar el motor sin gráficos.
 
 ### Puntuación
 
-- Cada nota mide qué parte de su duración estuviste dentro de la tolerancia (con un 80 % basta para el 100 %, se perdona el ataque).
-- `perfect` ≥ 85 %, `great` ≥ 60 %, `good` ≥ 30 %, si no `miss`.
-- Puntos = precisión × 100 × peso por duración × multiplicador de combo (×2 a partir de 5 notas, ×3 desde 15, ×4 desde 30). Las notas doradas valen el doble.
-- Nota final por afinación media: S ≥ 90 %, A ≥ 80 %, B ≥ 65 %, C ≥ 50 %, D. Estrellas de 0 a 5 en medias estrellas; con un 90 % (una S) ya tienes las 5.
+La app de ejemplo lo explica también dentro de la propia app: **Ajustes → ¿Cómo se puntúa?**, o **¿Cómo se calcula?** en la pantalla de resultados.
+
+**1. Dar la nota.** Mientras suena cada barra se escucha la voz unas 60 veces por segundo. Estás *afinado* si te desvías de la nota menos que el margen de la dificultad: ±1 semitono en Fácil, ±½ en Normal y ±30 cents en Difícil. Con `octaveTolerant` (activado por defecto) vale la misma nota en otra octava.
+
+**2. Calificación de cada nota.** Se mide qué parte de la nota estuviste afinado; con el 80 % ya cuenta como 100 %, para perdonar el retraso al empezar.
+
+| Calificación | Precisión |
+|---|---|
+| `perfect` (¡Perfecto!) | ≥ 85 % |
+| `great` (¡Genial!) | ≥ 60 % |
+| `good` (Bien) | ≥ 30 % |
+| `miss` (fallo) | < 30 % |
+
+**3. Puntos.** `puntos = precisión × 100 × peso × multiplicador`, y ×2 si la nota es dorada.
+- *Peso*: duración de la nota entre la duración media de la canción, limitado entre 0,5 y 3 (las notas largas valen más).
+- *Multiplicador de combo*: cada nota que no es `miss` suma 1 al combo y un `miss` lo reinicia. ×1 hasta 4 notas, ×2 desde 5, ×3 desde 15 y ×4 desde 30.
+- Ejemplo: una nota de duración media al 90 % con combo 12 → 90 × 2 = 180 puntos.
+
+**4. Rachas.** Cada 2 s seguidos afinado (`streakStep`) sube un nivel de racha y se emite el evento `streak`. Hasta 0,2 s de silencio no la corta (respirar, consonantes); desafinar sí. No suma puntos: es solo para animar.
+
+**5. Nota final y estrellas.** La *afinación media* es la precisión de todas las notas ponderada por su duración; las no cantadas cuentan como 0 %.
+
+| Afinación media | Nota | Estrellas |
+|---|---|---|
+| ≥ 90 % | S | 5 |
+| ≥ 80 % | A | 4½ |
+| ≥ 65 % | B | 3½ |
+| ≥ 50 % | C | 3 |
+| < 50 % | D | 0 a 2½ |
+
+Las estrellas van de media en media (`min(5, redondeo(media / 0,9 × 10) / 2)`): cada 9 % de afinación media es media estrella.
+
+**6. Récords.** En la app de ejemplo el récord de cada canción es la mejor puntuación cantando con micrófono (la demo no cuenta), guardada solo en el dispositivo.
 
 ## Piezas sueltas (para otros juegos)
 

@@ -388,6 +388,7 @@
 
       <div class="group">
         <h3>Partida</h3>
+        <button class="help-link" type="button" data-open-help>¿Cómo se puntúa?</button>
         <div class="setting">
           <div class="setting-label"><span>Dificultad</span><small id="difficulty-hint"></small></div>
           <div class="segmented" data-setting="difficulty" role="radiogroup" aria-label="Dificultad">
@@ -501,9 +502,93 @@
     <div class="result-score"><span id="result-score">0</span> puntos</div>
     <div class="record" id="record" hidden>¡Nuevo récord!</div>
     <dl class="breakdown" id="breakdown"></dl>
+    <button class="help-link center" type="button" data-open-help>¿Cómo se calcula?</button>
     <div class="menu">
       <button class="btn btn-primary btn-lg" data-action="again">Otra vez</button>
       <button class="btn btn-ghost" data-action="library">Elegir otra canción</button>
+    </div>
+  </dialog>
+
+  <!-- ============ HELP: SCORING ============ -->
+  <dialog class="sheet" id="scoring-help" aria-labelledby="scoring-title">
+    <div class="sheet-grip" aria-hidden="true"></div>
+    <div class="sheet-body help">
+      <div class="sheet-title-row">
+        <h2 id="scoring-title">¿Cómo se puntúa?</h2>
+        <button class="icon-btn" data-close aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </div>
+
+      <section>
+        <h3>1 · Dar la nota</h3>
+        <p>Mientras suena cada barra, PitchCoach escucha tu voz unas 60 veces por segundo y comprueba si estás <b>afinado</b>: lo bastante cerca de la nota de la barra. La barra y la sílaba se ponen verdes en los momentos en que aciertas.</p>
+        <table class="help-table">
+          <thead><tr><th>Dificultad</th><th>Margen permitido</th></tr></thead>
+          <tbody>
+            <tr><td>Fácil</td><td>±1 semitono</td></tr>
+            <tr><td>Normal</td><td>±½ semitono</td></tr>
+            <tr><td>Difícil</td><td>±⅓ de semitono (30 cents)</td></tr>
+          </tbody>
+        </table>
+        <p class="muted">Con «Cualquier octava vale» activado, la nota cuenta aunque la cantes una octava más grave o más aguda (útil si la canción no es de tu tesitura).</p>
+      </section>
+
+      <section>
+        <h3>2 · Cada nota tiene una calificación</h3>
+        <p>Al terminar una barra se mira qué parte de su duración estuviste afinado. Basta con acertar el <b>80 %</b> para tener el 100 %: así se perdona el pequeño retraso al empezar cada nota.</p>
+        <table class="help-table">
+          <thead><tr><th>Calificación</th><th>Precisión</th></tr></thead>
+          <tbody>
+            <tr><td><span class="r-perfect">★ Perfecto</span></td><td>85 % o más</td></tr>
+            <tr><td><span class="r-great">Genial</span></td><td>60 % o más</td></tr>
+            <tr><td><span class="r-good">Bien</span></td><td>30 % o más</td></tr>
+            <tr><td><span class="r-miss">Fallo</span></td><td>menos del 30 %</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h3>3 · Puntos</h3>
+        <p>Cada nota da hasta <b>100 puntos</b> según tu precisión. Las notas largas valen más (hasta el triple) y las cortas menos (hasta la mitad), comparadas con la duración media de la canción. Las <b>notas doradas</b> valen el doble.</p>
+        <p>Además, el <b>combo</b> multiplica los puntos. Cada nota que no es «Fallo» suma 1 al combo; un fallo lo pone a cero.</p>
+        <table class="help-table">
+          <thead><tr><th>Combo</th><th>Multiplicador</th></tr></thead>
+          <tbody>
+            <tr><td>0 a 4 notas</td><td>×1</td></tr>
+            <tr><td>5 a 14 notas</td><td>×2</td></tr>
+            <tr><td>15 a 29 notas</td><td>×3</td></tr>
+            <tr><td>30 o más</td><td>×4</td></tr>
+          </tbody>
+        </table>
+        <p class="example"><b>Ejemplo:</b> una nota de duración normal cantada al 90 % con un combo de 12 da 90 × 2 = <b>180 puntos</b>.</p>
+      </section>
+
+      <section>
+        <h3>4 · Rachas y estrellitas</h3>
+        <p>Cada <b>2 segundos seguidos</b> afinado subes un nivel de racha: aparece «¡Racha x2!», «¡Racha x3!»… con una lluvia de estrellas. Respirar o pronunciar una consonante (hasta 0,2 s de silencio) no la corta; desafinar sí. Las rachas son para animarte: no suman puntos.</p>
+      </section>
+
+      <section>
+        <h3>5 · Nota final y estrellas</h3>
+        <p>Al acabar se calcula tu <b>afinación media</b>: la precisión de todas las notas, contando más las largas. Las notas que no cantaste cuentan como 0 %.</p>
+        <table class="help-table">
+          <thead><tr><th>Afinación media</th><th>Nota</th><th>Estrellas</th></tr></thead>
+          <tbody>
+            <tr><td>90 % o más</td><td><b class="g-s">S</b></td><td>★★★★★</td></tr>
+            <tr><td>80 % o más</td><td><b>A</b></td><td>4½</td></tr>
+            <tr><td>65 % o más</td><td><b>B</b></td><td>3½</td></tr>
+            <tr><td>50 % o más</td><td><b>C</b></td><td>3</td></tr>
+            <tr><td>menos del 50 %</td><td><b>D</b></td><td>0 a 2½</td></tr>
+          </tbody>
+        </table>
+        <p class="muted">Las estrellas van de media en media: cada 9 % de afinación media es media estrella. La tabla muestra las que corresponden justo en el límite de cada nota.</p>
+      </section>
+
+      <section>
+        <h3>6 · Récords</h3>
+        <p>Tu récord de cada canción es tu <b>mejor puntuación</b> cantando con el micrófono. El modo «Escuchar demo» no cuenta. Los récords se guardan solo en este dispositivo y puedes borrarlos en Ajustes → Tus datos.</p>
+      </section>
+
+      <button class="btn btn-primary" data-close>Entendido</button>
     </div>
   </dialog>
 

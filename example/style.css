@@ -561,3 +561,20 @@ kbd, code { padding: 1px 6px; border-radius: 6px; background: rgba(255, 255, 255
 html[data-theme="invertido"] { filter: invert(1); }
 /* los diálogos se pintan en una capa aparte del navegador: hay que invertirlos también */
 html[data-theme="invertido"] dialog { filter: invert(1); }
+
+/* ayuda: cómo se puntúa */
+.help section { display: grid; gap: 8px; }
+.help h3 { margin: 0; font-size: 16px; font-weight: 900; letter-spacing: 0; text-transform: none; color: var(--text); }
+.help p { margin: 0; line-height: 1.5; font-size: 14.5px; }
+.help .muted { font-size: 13px; }
+.help .example { padding: 10px 12px; border-radius: 12px; background: rgba(31, 209, 181, 0.1); }
+.help-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.help-table th { text-align: left; font-size: 12px; font-weight: 800; color: var(--muted); padding: 4px 8px; }
+.help-table td { padding: 7px 8px; border-top: 1px solid var(--line); font-weight: 700; }
+.help-table td:last-child, .help-table th:last-child { text-align: right; }
+.r-perfect, .g-s { color: var(--gold); }
+.r-great { color: var(--hit); }
+.r-miss { color: var(--danger); }
+.help-link { justify-self: start; width: fit-content; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; font-weight: 800; font-size: 14px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.group > .help-link { margin: 0 0 6px; }
+.help-link.center { display: block; margin: -8px auto 16px; }

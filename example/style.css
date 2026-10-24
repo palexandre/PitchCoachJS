@@ -542,3 +542,17 @@ kbd, code { padding: 1px 6px; border-radius: 6px; background: rgba(255, 255, 255
 .sheet-head-text h2 { overflow-wrap: anywhere; }
 .rec-option.busy { opacity: 0.6; pointer-events: none; }
 .rec-option.busy small::after { content: ' · preparando…'; color: var(--accent); }
+
+/* tus datos */
+.data-note { margin: -2px 0 4px; font-size: 12.5px; color: var(--muted); }
+.btn-outline-danger { flex: none; background: transparent; border-color: rgba(255, 122, 138, 0.45); color: var(--danger); }
+.btn-outline-danger:hover { background: rgba(255, 122, 138, 0.1); }
+.btn-outline-danger:disabled { opacity: 0.35; }
+.btn-danger-soft { width: 100%; margin-top: 10px; background: rgba(255, 122, 138, 0.12); border-color: transparent; color: var(--danger); }
+.btn-danger-soft:hover { background: rgba(255, 122, 138, 0.2); }
+.best-clear {
+  margin-left: auto; display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 50%;
+  background: transparent; color: var(--muted); cursor: pointer;
+}
+.best-clear:hover { background: rgba(255, 255, 255, 0.08); color: var(--danger); }
+.best-clear svg { width: 18px; height: 18px; }

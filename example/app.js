@@ -1,6 +1,6 @@
 import { PitchCoach, loadSong, midiToName, songToDraft, joinLyrics, draftToJSON, draftToMidi, songToWav } from '../src/index.js';
-import { readJSON, writeJSON, listImported, saveImported, deleteImported } from './store.js';
-import { SongEditor, emptyDraft } from './editor.js';
+import { readJSON, writeJSON, removeJSON, clearAllJSON, listImported, saveImported, deleteImported, clearImported } from './store.js';
+import { SongEditor, emptyDraft, EDITOR_DEFAULTS } from './editor.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -176,10 +176,12 @@ function openSongSheet(entry) {
     <div class="stat"><b>${noteName(s.lowest + transposeOf(entry))}–${noteName(s.highest + transposeOf(entry))}</b><span>Tesitura</span></div>`;
   const b = best[entry.id];
   $('#sheet-best').innerHTML = b
-    ? `<span>Tu récord</span><span class="mini-stars">${starsText(b.stars)}</span><span>${b.grade} · ${b.score.toLocaleString('es')}</span>`
+    ? `<span>Tu récord</span><span class="mini-stars">${starsText(b.stars)}</span><span>${b.grade} · ${b.score.toLocaleString('es')}</span>
+       <button class="best-clear" id="best-clear" aria-label="Borrar el récord de esta canción" title="Borrar récord">
+         <svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></svg></button>`
     : '';
   $('#delete-song').hidden = !entry.imported;
-  $('#edit-btn span').textContent = entry.own ? 'Editar' : 'Editar una copia';
+  $('#edit-btn span').textContent = entry.own ? 'Editar' : 'Editar copia';
   renderChips();
   openDialog($('#song-sheet'));
 }
@@ -223,12 +225,95 @@ async function removeSong(id) {
 // Settings
 // =========================================================================
 
+// ---- tus datos ------------------------------------------------------------------
+
+function plural(n, one, many) {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
+function syncDataUI() {
+  $('#data-group').hidden = isPlaying();
+  const records = Object.keys(best).length;
+  const own = library.filter((e) => e.own).length;
+  const imported = library.filter((e) => e.imported && !e.own).length;
+  $('#data-best').textContent = records ? plural(records, 'canción con récord', 'canciones con récord') : 'Ninguno todavía';
+  $('#data-songs').textContent = own + imported
+    ? [own && plural(own, 'creada', 'creadas'), imported && plural(imported, 'importada', 'importadas')].filter(Boolean).join(' · ')
+    : 'Ninguna todavía';
+  $('[data-clear="best"]').disabled = !records;
+  $('[data-clear="songs"]').disabled = !(own + imported);
+}
+
+const CLEAR_TEXT = {
+  best: { title: '¿Borrar todos los récords?', text: 'Se perderán tus mejores puntuaciones y estrellas de todas las canciones.', ok: 'Borrar récords', done: 'Récords borrados' },
+  songs: { title: '¿Borrar tus canciones?', text: 'Se eliminarán las canciones que has creado o importado, con sus récords. Si quieres conservar alguna, expórtala antes.', ok: 'Borrar canciones', done: 'Canciones borradas' },
+  settings: { title: '¿Restablecer los ajustes?', text: 'Vuelven los valores de fábrica: dificultad, sonido, tono de cada canción, preferencias del editor y el borrador sin guardar.', ok: 'Restablecer', done: 'Ajustes restablecidos' },
+  all: { title: '¿Borrar todos tus datos?', text: 'Récords, canciones creadas e importadas, ajustes y borradores. La app quedará como recién instalada.', ok: 'Borrar todo', done: 'Todos tus datos se han borrado' },
+};
+
+async function clearData(kind) {
+  const t = CLEAR_TEXT[kind];
+  if (!(await askConfirm({ title: t.title, text: t.text, ok: t.ok, cancel: 'Cancelar', danger: true }))) return;
+  const forget = (obj) => Object.keys(obj).forEach((k) => delete obj[k]);
+
+  if (kind === 'best' || kind === 'all') forget(best);
+  if (kind === 'songs' || kind === 'all') {
+    await clearImported();
+    for (const e of library.filter((x) => x.imported)) {
+      delete best[e.id];
+      delete perSong[e.id];
+    }
+    library = library.filter((e) => !e.imported);
+    if (current?.imported) {
+      closeDialog($('#song-sheet'));
+      current = null;
+    }
+  }
+  if (kind === 'settings' || kind === 'all') {
+    Object.assign(settings, DEFAULT_SETTINGS);
+    forget(perSong);
+    Object.assign(editor.prefs, EDITOR_DEFAULTS);
+    editor.clearAutosave();
+    game.set({ ...settings });
+    editor.keyboard.setNotation(settings.notation);
+  }
+
+  if (kind === 'all') {
+    clearAllJSON();
+  } else {
+    writeJSON('best', best);
+    writeJSON('per-song', perSong);
+    if (kind === 'settings') {
+      removeJSON('settings');
+      removeJSON('editor-prefs');
+    }
+  }
+  renderLibrary();
+  syncSettingsUI();
+  if (current) renderChips();
+  toast(t.done);
+}
+
+document.querySelectorAll('[data-clear]').forEach((b) => b.addEventListener('click', () => clearData(b.dataset.clear)));
+
+$('#sheet-best').addEventListener('click', async (e) => {
+  if (!e.target.closest('#best-clear') || !current) return;
+  const ok = await askConfirm({ title: '¿Borrar este récord?', text: `Se perderá tu mejor puntuación en «${current.song.title}».`, ok: 'Borrar récord', cancel: 'Cancelar', danger: true });
+  if (!ok) return;
+  delete best[current.id];
+  writeJSON('best', best);
+  $('#sheet-best').innerHTML = '';
+  renderLibrary();
+  toast('Récord borrado');
+});
+
 function openSettings() {
   syncSettingsUI();
   openDialog($('#settings'));
 }
 
 function syncSettingsUI() {
+  syncDataUI();
   document.querySelectorAll('.segmented[data-setting]').forEach((seg) => {
     const key = seg.dataset.setting;
     seg.querySelectorAll('button').forEach((b) => b.setAttribute('aria-checked', String(String(settings[key]) === b.dataset.value)));

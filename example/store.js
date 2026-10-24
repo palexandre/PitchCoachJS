@@ -18,6 +18,19 @@ export function writeJSON(key, value) {
   } catch { /* storage unavailable */ }
 }
 
+/** Borra todo lo que la app guardó en localStorage. */
+export function clearAllJSON() {
+  try {
+    Object.keys(localStorage).filter((k) => k.startsWith(PREFIX)).forEach((k) => localStorage.removeItem(k));
+  } catch { /* storage unavailable */ }
+}
+
+export function removeJSON(key) {
+  try {
+    localStorage.removeItem(PREFIX + key);
+  } catch { /* storage unavailable */ }
+}
+
 // ---- imported songs (IndexedDB, files can be bigger than localStorage allows) ----
 
 let dbPromise = null;
@@ -55,6 +68,12 @@ export async function saveImported(entry) {
   try {
     await tx('readwrite', (s) => s.put(entry));
   } catch { /* not persisted, still playable this session */ }
+}
+
+export async function clearImported() {
+  try {
+    await tx('readwrite', (s) => s.clear());
+  } catch { /* ignore */ }
 }
 
 export async function deleteImported(id) {

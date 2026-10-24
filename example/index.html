@@ -441,6 +441,24 @@
           <select id="track-select"></select>
         </label>
       </div>
+
+      <div class="group" id="data-group">
+        <h3>Tus datos</h3>
+        <p class="data-note">Se guardan solo en este dispositivo. Borrarlos no se puede deshacer.</p>
+        <div class="setting">
+          <div class="setting-label"><span>Récords</span><small id="data-best"></small></div>
+          <button class="btn btn-sm btn-outline-danger" data-clear="best">Borrar</button>
+        </div>
+        <div class="setting">
+          <div class="setting-label"><span>Mis canciones</span><small id="data-songs"></small></div>
+          <button class="btn btn-sm btn-outline-danger" data-clear="songs">Borrar</button>
+        </div>
+        <div class="setting">
+          <div class="setting-label"><span>Ajustes y preferencias</span><small>Dificultad, tono de cada canción, editor y borrador</small></div>
+          <button class="btn btn-sm btn-outline-danger" data-clear="settings">Restablecer</button>
+        </div>
+        <button class="btn btn-danger-soft" data-clear="all">Borrar todos mis datos</button>
+      </div>
     </div>
   </dialog>
 

@@ -31,6 +31,8 @@ const COLORS = {
   pitch: '#43e08c',
 };
 
+export const EDITOR_DEFAULTS = { duration: 1, write: true, metronome: true, grid: 0.25 };
+
 export const emptyDraft = () => ({ title: '', artist: '', bpm: 90, beatsPerBar: 4, lyricsText: '', notes: [] });
 
 export class SongEditor {
@@ -52,7 +54,7 @@ export class SongEditor {
     this.canvas = this.$('#ed-roll');
     this.g = this.canvas.getContext('2d');
 
-    const prefs = readJSON('editor-prefs', { duration: 1, write: true, metronome: true, grid: 0.25 });
+    const prefs = readJSON('editor-prefs', { ...EDITOR_DEFAULTS });
     this.prefs = prefs;
     this.draft = emptyDraft();
     this.id = null;

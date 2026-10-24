@@ -83,3 +83,13 @@ test('transpose shifts the targets', async () => {
   sing(s, song, (t) => (song.notes.find((n) => t >= n.start && t < n.end)?.midi ?? 0) + 3);
   assert.equal(s.result().grade, 'S');
 });
+
+test('legatoGroups liga las sílabas seguidas a la misma altura, sin tocar las demás', async () => {
+  const { legatoGroups } = await import('../src/index.js');
+  const g = legatoGroups([
+    { start: 0, end: 0.5, midi: 60 }, { start: 0.5, end: 1, midi: 60 }, { start: 1.02, end: 1.5, midi: 60 }, // recitado
+    { start: 1.5, end: 2, midi: 62 },                                                                         // cambia de nota
+    { start: 2.5, end: 3, midi: 62 },                                                                         // tras un silencio
+  ]);
+  assert.deepEqual(g.map((x) => [x.start, x.end, x.midi, x.count]), [[0, 1.5, 60, 3], [1.5, 2, 62, 1], [2.5, 3, 62, 1]]);
+});

@@ -285,7 +285,8 @@ export class Renderer {
     const t1 = time + (this.width - this.layout.playheadX) / this.pps + 0.5;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.font = this._font(Math.max(12, Math.min(17, bh + 2)), 700);
+    const lyricSize = Math.max(12, Math.min(17, bh + 2));
+    ctx.font = this._font(lyricSize, 700);
 
     for (const n of song.notes) {
       if (n.end < t0) continue;
@@ -335,6 +336,10 @@ export class Renderer {
         // hasta donde empieza la nota siguiente; si no cabe, se recorta con «…»
         const next = song.notes[n.index + 1];
         const room = Math.max(x1 - x0, (next ? this.xFor(next.start, time) : Infinity) - x0 - 8);
+        // varias sílabas recitadas en una nota: se encoge la letra hasta un 65 % y solo después se recorta
+        const full = ctx.measureText(n.lyric).width;
+        const scale = full > room ? Math.max(0.65, room / full) : 1;
+        if (scale < 1) ctx.font = this._font(Math.round(lyricSize * scale), 700);
         const text = fitText(ctx, n.lyric, room);
         if (ctx.measureText(text).width <= x1 - x0) {
           ctx.fillText(text, (x0 + x1) / 2, y + bh + 6);
@@ -343,6 +348,7 @@ export class Renderer {
           ctx.fillText(text, x0, y + bh + 6);
           ctx.textAlign = 'center';
         }
+        if (scale < 1) ctx.font = this._font(lyricSize, 700);
       }
     }
   }

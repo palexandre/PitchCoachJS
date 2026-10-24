@@ -1,6 +1,6 @@
 export { PitchCoach } from './game.js';
 export { loadSong } from './load.js';
-export { finalizeSong } from './song.js';
+export { finalizeSong, legatoGroups } from './song.js';
 export { PitchDetector, yin } from './pitch-detector.js';
 export { Scorer, DIFFICULTIES } from './scorer.js';
 export { Renderer, DEFAULT_THEME, DEFAULT_LABELS } from './renderer.js';

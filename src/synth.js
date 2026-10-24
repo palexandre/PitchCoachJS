@@ -4,6 +4,7 @@
  */
 import { midiToFreq } from './notes.js';
 import { Piano } from './piano.js';
+import { legatoGroups } from './song.js';
 
 const LOOKAHEAD = 0.35; // seconds of song scheduled in advance
 
@@ -26,7 +27,8 @@ export class Synth {
 
   setSong(song) {
     this.events = [
-      ...song.notes.map((n) => ({ ...n, bus: 'guide' })),
+      // sílabas seguidas a la misma altura suenan como una sola nota, sin cortes
+      ...legatoGroups(song.notes).map((n) => ({ ...n, bus: 'guide' })),
       ...song.accompaniment.map((n) => ({ ...n, bus: 'backing' })),
     ].sort((a, b) => a.start - b.start);
     this.cursor = 0;

@@ -2,7 +2,7 @@
 // real-time recording (piano or voice), lyrics and export.
 import {
   Piano, PianoKeyboard, NoteRecorder, PitchDetector,
-  splitLyrics, midiToName, draftToJSON, themedContext,
+  splitLyrics, midiToName, draftToJSON, themedContext, legatoGroups,
 } from '../src/index.js';
 import { readJSON, writeJSON } from './store.js';
 
@@ -310,9 +310,9 @@ export class SongEditor {
     const spb = 60 / this.draft.bpm;
     const from = this.cursor >= this.endBeat() - 1e-6 ? 0 : this.cursor;
     const t0 = ctx.currentTime + 0.08;
-    for (const n of this.notes) {
-      if (n.beat < from - 1e-6) continue;
-      this.piano.play(n.midi, { when: t0 + (n.beat - from) * spb, duration: n.length * spb * 0.96 });
+    const groups = legatoGroups(this.notes.filter((n) => n.beat >= from - 1e-6).map((n) => ({ start: n.beat, end: n.beat + n.length, midi: n.midi })), 0.01);
+    for (const g of groups) {
+      this.piano.play(g.midi, { when: t0 + (g.start - from) * spb, duration: (g.end - g.start) * spb * 0.96 });
     }
     this.mode = 'playing';
     this.playFrom = { t0, beat: from };

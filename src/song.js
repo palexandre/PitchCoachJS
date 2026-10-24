@@ -92,3 +92,25 @@ function buildLines(notes) {
   });
   return lines;
 }
+
+/**
+ * Une en un solo sonido las notas seguidas de la misma altura sin silencio entre
+ * ellas (sílabas recitadas sobre la misma nota), para que la guía no las corte.
+ * Solo afecta al sonido: la letra y la puntuación siguen nota a nota.
+ * @param {{start: number, end: number, midi: number}[]} notes ordenadas
+ * @param {number} [gap=0.06] separación máxima para considerarlas ligadas
+ * @returns {{start: number, end: number, midi: number, count: number}[]}
+ */
+export function legatoGroups(notes, gap = 0.06) {
+  const out = [];
+  for (const n of notes) {
+    const prev = out[out.length - 1];
+    if (prev && n.midi === prev.midi && n.start - prev.end <= gap && n.start >= prev.start) {
+      prev.end = Math.max(prev.end, n.end);
+      prev.count++;
+    } else {
+      out.push({ start: n.start, end: n.end, midi: n.midi, count: 1 });
+    }
+  }
+  return out;
+}

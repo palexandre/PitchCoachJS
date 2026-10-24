@@ -757,4 +757,83 @@ function escapeHTML(s) {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-initLibrary();
+// =========================================================================
+// PWA: funcionamiento sin conexión, instalación y apertura de archivos
+// =========================================================================
+
+const ready = initLibrary();
+
+// En local (desarrollo) no se registra, para no servir archivos antiguos de la caché;
+// añade ?sw a la URL para probarlo.
+const isLocal = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+let updating = false; // solo se recarga cuando el usuario pide la versión nueva
+if ('serviceWorker' in navigator && (!isLocal || new URLSearchParams(location.search).has('sw'))) {
+  navigator.serviceWorker.register('sw.js').then((reg) => {
+    const offerUpdate = (worker) => {
+      $('#update-bar').hidden = false;
+      $('#update-btn').onclick = () => {
+        $('#update-btn').disabled = true;
+        updating = true;
+        worker.postMessage('skipWaiting');
+      };
+    };
+    if (reg.waiting && navigator.serviceWorker.controller) offerUpdate(reg.waiting);
+    reg.addEventListener('updatefound', () => {
+      const w = reg.installing;
+      w?.addEventListener('statechange', () => {
+        if (w.state === 'installed' && navigator.serviceWorker.controller) offerUpdate(w);
+      });
+    });
+    // busca versiones nuevas al volver a la app
+    document.addEventListener('visibilitychange', () => !document.hidden && reg.update().catch(() => {}));
+  }).catch(() => { /* sin service worker la app funciona igual, solo que no sin conexión */ });
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!updating) return; // primera instalación: nada que recargar
+    updating = false;
+    location.reload();
+  });
+}
+
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+let installPrompt = null;
+
+addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  installPrompt = e;
+  $('#install-btn').hidden = false;
+});
+if (isIOS && !isStandalone()) $('#install-btn').hidden = false;
+
+$('#install-btn').addEventListener('click', async () => {
+  if (installPrompt) {
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    installPrompt = null;
+    if (outcome === 'accepted') $('#install-btn').hidden = true;
+  } else {
+    openDialog($('#install-help'));
+  }
+});
+addEventListener('appinstalled', () => {
+  $('#install-btn').hidden = true;
+  toast('PitchCoach instalada. Ya puedes abrirla desde su icono.');
+});
+
+// Acceso directo «Crear canción» del icono de la app
+if (new URLSearchParams(location.search).get('accion') === 'crear') {
+  ready.then(() => $('#create-song').click());
+  history.replaceState(history.state, '', location.pathname);
+}
+
+// «Abrir con PitchCoach» desde el explorador de archivos (app instalada en ordenador)
+if ('launchQueue' in window) {
+  window.launchQueue.setConsumer(async (params) => {
+    if (!params.files?.length) return;
+    await ready;
+    const file = await params.files[0].getFile();
+    if (isPlaying() || isEditing()) return toast('Termina lo que estás haciendo y vuelve a abrir el archivo', true);
+    importFile(file);
+  });
+}

@@ -3,10 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#1b0748">
+  <meta name="theme-color" content="#170640">
+  <meta name="description" content="Karaoke que te escucha: canta, afina y suma estrellas. Crea tus canciones tocando el piano o cantando.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="PitchCoach">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>PitchCoach · practica a cantar</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
@@ -23,9 +30,15 @@
         </span>
         <span class="brand-name">PitchCoach</span>
       </div>
+      <div class="header-actions">
+      <button class="install-btn" id="install-btn" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14"/></svg>
+        <span>Instalar</span>
+      </button>
       <button class="icon-btn" id="open-settings-home" aria-label="Ajustes">
         <svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
       </button>
+      </div>
     </header>
 
     <div class="home-hero">
@@ -427,6 +440,32 @@
       <button class="btn btn-ghost" data-action="library">Elegir otra canción</button>
     </div>
   </dialog>
+
+  <!-- ============ INSTALL (iPhone / iPad) ============ -->
+  <dialog class="sheet" id="install-help" aria-labelledby="install-title">
+    <div class="sheet-grip" aria-hidden="true"></div>
+    <div class="sheet-body">
+      <div class="sheet-title-row">
+        <h2 id="install-title">Instala PitchCoach</h2>
+        <button class="icon-btn" data-close aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </div>
+      <p class="muted install-intro">Tendrás la app en tu pantalla de inicio, a pantalla completa y funcionando sin conexión.</p>
+      <ol class="install-steps">
+        <li><span class="step-n">1</span><span>Toca <b>Compartir</b>
+          <svg class="inline-icon" viewBox="0 0 24 24" aria-label="icono Compartir"><path d="M12 15V3m0 0L8 7m4-4 4 4M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>
+          en la barra de Safari.</span></li>
+        <li><span class="step-n">2</span><span>Elige <b>Añadir a pantalla de inicio</b>
+          <svg class="inline-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/></svg>.</span></li>
+        <li><span class="step-n">3</span><span>Pulsa <b>Añadir</b> y abre PitchCoach desde su icono.</span></li>
+      </ol>
+      <button class="btn btn-primary" data-close>Entendido</button>
+    </div>
+  </dialog>
+
+  <div class="update-bar" id="update-bar" role="status" hidden>
+    <span>Hay una versión nueva de PitchCoach</span>
+    <button class="btn btn-primary btn-sm" id="update-btn">Actualizar</button>
+  </div>
 
   <div class="drop-overlay" id="drop-overlay" aria-hidden="true"><div>Suelta la canción para importarla</div></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>

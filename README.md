@@ -33,6 +33,17 @@ La página de ejemplo es una app completa y responsive (móvil primero):
   - Escuchar con piano y metrónomo, tempo y compás, deshacer/rehacer, autoguardado del borrador, **Probar cantando** y exportar a **JSON** o **MIDI con letra**.
 - Arrastra un `.mid`, `.kar`, `.txt` (UltraStar) o `.json` sobre la página para importarlo.
 
+## Instalar como app (PWA)
+
+La demo es una PWA: desde https://palexandre.github.io/PitchCoachJS/example/ puedes instalarla y funciona **sin conexión**.
+
+- **Android / Chrome / Edge:** botón **Instalar** arriba a la derecha (o el menú del navegador → *Instalar app*).
+- **iPhone / iPad:** botón **Instalar** → instrucciones para *Compartir → Añadir a pantalla de inicio* en Safari.
+- Mantén pulsado el icono para ir directo a **Crear canción**. En ordenador, la app instalada puede **abrir archivos** `.mid`, `.kar`, `.txt` y `.json`.
+- Cuando publiques cambios, la app avisa con **«Hay una versión nueva»** y se actualiza al pulsar *Actualizar*.
+
+Si cambias archivos de `example/` o `src/`, ejecuta `npm run pwa` antes de publicar: actualiza la lista de archivos y la versión del service worker (`example/sw.js`). Los tests fallan si se te olvida. En `localhost` el service worker no se registra, para que veas siempre tus cambios; añade `?sw` a la URL para probarlo.
+
 ## Uso básico
 
 ```html

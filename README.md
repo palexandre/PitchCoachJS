@@ -19,7 +19,8 @@ npm run dev          # sirve el repo en http://localhost:5173
 
 La página de ejemplo es una app completa y responsive (móvil primero):
 
-- **Biblioteca**: canciones de muestra + las que importes (se guardan en el navegador), con tu mejor nota y estrellas.
+- **Inicio**: un botón para **practicar una canción**, acceso rápido a la última que practicaste, **crear** e **importar**.
+- **Selector de canciones**: buscador por título, artista o letra (sin importar tildes ni mayúsculas), filtros (Todas, Mías, Importadas, Ejemplos, Con récord, Sin practicar) y orden por título, artista, duración, fecha añadida, última vez practicada o récord. Pensado para cientos de canciones.
 - **Ficha de canción** (hoja inferior en móvil): duración, notas, tesitura, récord y un resumen de ajustes. **Cantar** pide el micrófono; **Escuchar demo** se canta sola enviando la guía al detector.
 - **Partida a pantalla completa**: solo el escenario, la pausa, la nota que estás cantando y la puntuación. Respeta el notch, mantiene la pantalla encendida y se pausa al cambiar de app.
 - **Pausa**: continuar, repetir la frase actual en bucle, empezar de nuevo, ajustes o salir. Espacio/Esc también pausan; el botón atrás del móvil sale.

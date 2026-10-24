@@ -70,6 +70,7 @@ async function parseEntry(entry) {
   try {
     entry.song = await loadSong(entry.source, { name: entry.name, melody: perSong[entry.id]?.melody });
     entry.error = null;
+    indexEntry(entry);
   } catch (err) {
     entry.song = null;
     entry.error = err.message;
@@ -77,33 +78,212 @@ async function parseEntry(entry) {
   return entry;
 }
 
+// ---- selector de canciones ---------------------------------------------------
+
+const SORT_DEFAULT_DIR = { title: 'asc', artist: 'asc', duration: 'asc', added: 'desc', played: 'desc', record: 'desc' };
+const picker = readJSON('picker', { sort: 'title', dir: 'asc', filter: 'all' });
+let query = '';
+const collator = new Intl.Collator('es', { sensitivity: 'base', numeric: true });
+const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+/** Prepara los textos en los que se busca (sin tildes ni mayúsculas). */
+function indexEntry(e) {
+  const s = e.song;
+  e.search = { title: norm(s.title), artist: norm(e.artist || s.artist), lyrics: norm(s.lines.map((l) => l.text).join(' ')) };
+}
+
+const lastPlayed = (e) => perSong[e.id]?.lastPlayed ?? 0;
+
+function visibleSongs() {
+  const terms = norm(query).split(/\s+/).filter(Boolean);
+  let list = library.filter((e) => e.song);
+  const f = picker.filter;
+  if (f === 'own') list = list.filter((e) => e.own);
+  else if (f === 'imported') list = list.filter((e) => e.imported && !e.own);
+  else if (f === 'builtin') list = list.filter((e) => !e.imported);
+  else if (f === 'record') list = list.filter((e) => best[e.id]);
+  else if (f === 'new') list = list.filter((e) => !lastPlayed(e) && !best[e.id]);
+  if (terms.length) {
+    list = list.filter((e) => terms.every((t) => e.search.title.includes(t) || e.search.artist.includes(t) || e.search.lyrics.includes(t)));
+  }
+  const key = {
+    title: () => 0,
+    artist: (a, b) => collator.compare(a.artist || a.song.artist || '￿', b.artist || b.song.artist || '￿'),
+    duration: (a, b) => a.song.duration - b.song.duration,
+    added: (a, b) => (a.addedAt ?? 0) - (b.addedAt ?? 0),
+    played: (a, b) => lastPlayed(a) - lastPlayed(b),
+    record: (a, b) => (best[a.id]?.score ?? -1) - (best[b.id]?.score ?? -1),
+  }[picker.sort] ?? (() => 0);
+  const dir = picker.dir === 'desc' ? -1 : 1;
+  const byTitle = (a, b) => collator.compare(a.song.title, b.song.title);
+  return list.sort((a, b) => (picker.sort === 'title' ? dir * byTitle(a, b) : dir * key(a, b) || byTitle(a, b)));
+}
+
+/** Resalta los términos buscados en `text` (ignorando tildes y mayúsculas). */
+function highlight(text, terms) {
+  if (!terms.length) return escapeHTML(text);
+  let flat = '';
+  const map = [];
+  [...text].forEach((ch, i) => {
+    for (const c of norm(ch)) {
+      flat += c;
+      map.push(i);
+    }
+  });
+  const chars = [...text];
+  const marked = new Array(chars.length).fill(false);
+  for (const t of terms) {
+    let at = flat.indexOf(t);
+    while (at >= 0) {
+      for (let k = at; k < at + t.length; k++) marked[map[k]] = true;
+      at = flat.indexOf(t, at + t.length);
+    }
+  }
+  let out = '';
+  let open = false;
+  chars.forEach((c, i) => {
+    if (marked[i] && !open) (out += '<mark>'), (open = true);
+    if (!marked[i] && open) (out += '</mark>'), (open = false);
+    out += escapeHTML(c);
+  });
+  return out + (open ? '</mark>' : '');
+}
+
+function relativeDate(ms) {
+  const days = Math.round((Date.now() - ms) / 864e5);
+  if (days < 1) return 'hoy';
+  return new Intl.RelativeTimeFormat('es', { numeric: 'auto' }).format(-days, 'day');
+}
+
 function renderLibrary() {
+  renderHome();
   const el = $('#library');
-  el.innerHTML = '';
-  library.forEach((entry, i) => {
-    if (!entry.song) return;
+  if (!el) return;
+  const total = library.filter((e) => e.song).length;
+  const list = visibleSongs();
+  const terms = norm(query).split(/\s+/).filter(Boolean);
+  const filtered = terms.length || picker.filter !== 'all';
+  $('#songs-count').textContent = filtered ? `${list.length} de ${total}` : plural(total, 'canción', 'canciones');
+
+  el.innerHTML = list.map((entry, i) => {
     const s = entry.song;
     const b = best[entry.id];
-    const btn = document.createElement('button');
-    btn.className = 'song-card';
-    btn.setAttribute('role', 'listitem');
-    btn.style.animationDelay = `${i * 40}ms`;
-    btn.innerHTML = `
+    let lyricHit = '';
+    if (terms.length && !terms.every((t) => entry.search.title.includes(t) || entry.search.artist.includes(t))) {
+      const line = s.lines.find((l) => terms.some((t) => norm(l.text).includes(t)));
+      if (line) lyricHit = `<span class="song-lyric-hit">«${highlight(line.text.trim(), terms)}»</span>`;
+    }
+    const meta = [entry.artist || s.artist, formatDuration(s), FORMAT_TEXT[s.meta.format]].filter(Boolean).join(' · ');
+    const badge = b
+      ? `<span class="mini-grade">${b.grade}</span><span class="mini-stars">${starsText(b.stars)}</span>`
+      : entry.own ? '<span class="tag-new">Tuya</span>' : entry.imported && Date.now() - (entry.addedAt ?? 0) < 864e5 ? '<span class="tag-new">Nueva</span>' : '';
+    return `<button class="song-card" role="listitem" data-id="${escapeHTML(entry.id)}" style="animation-delay:${Math.min(i, 10) * 25}ms">
       ${coverHTML(s.title)}
       <span class="song-info">
-        <span class="song-title"></span>
-        <span class="song-meta"></span>
+        <span class="song-title">${highlight(s.title, terms)}</span>
+        <span class="song-meta">${highlight(meta, terms)}</span>
+        ${lyricHit}
       </span>
-      <span class="song-best">${b
-        ? `<span class="mini-grade">${b.grade}</span><span class="mini-stars">${starsText(b.stars)}</span>`
-        : entry.own ? '<span class="tag-new">Tuya</span>' : entry.imported && Date.now() - (entry.addedAt ?? 0) < 864e5 ? '<span class="tag-new">Nueva</span>' : ''}
-      </span>`;
-    btn.querySelector('.song-title').textContent = s.title;
-    btn.querySelector('.song-meta').textContent = [entry.artist || s.artist, formatDuration(s), FORMAT_TEXT[s.meta.format]].filter(Boolean).join(' · ');
-    btn.addEventListener('click', () => openSongSheet(entry));
-    el.append(btn);
-  });
+      <span class="song-best">${badge}</span>
+    </button>`;
+  }).join('');
+
+  const empty = !list.length;
+  $('#songs-empty').hidden = !empty;
+  if (empty) {
+    $('#songs-empty-title').textContent = !total ? 'Todavía no hay canciones' : terms.length ? `Nada coincide con «${query.trim()}»` : 'No hay canciones con este filtro';
+    $('#songs-empty-text').textContent = !total ? 'Crea o importa una desde el inicio.' : 'Prueba con otras palabras o elige «Todas».';
+  }
+  syncPickerControls();
 }
+
+function syncPickerControls() {
+  for (const b of document.querySelectorAll('#song-filters button')) b.setAttribute('aria-checked', String(b.dataset.filter === picker.filter));
+  $('#song-sort').value = picker.sort;
+  const labels = {
+    title: ['A → Z', 'Z → A'], artist: ['A → Z', 'Z → A'], duration: ['Más cortas primero', 'Más largas primero'],
+    added: ['Más antiguas primero', 'Más recientes primero'], played: ['Hace más tiempo primero', 'Más recientes primero'],
+    record: ['Récord más bajo primero', 'Récord más alto primero'],
+  }[picker.sort];
+  const btn = $('#sort-dir');
+  btn.textContent = picker.dir === 'asc' ? '↑' : '↓';
+  btn.title = labels[picker.dir === 'asc' ? 0 : 1];
+  btn.setAttribute('aria-label', `Orden: ${btn.title}. Pulsa para invertir`);
+}
+
+function renderHome() {
+  const total = library.filter((e) => e.song).length;
+  $('#practice-count').textContent = total ? `Elige entre ${plural(total, 'canción', 'canciones')}` : 'Crea o importa tu primera canción';
+  const last = library.filter((e) => e.song && lastPlayed(e)).sort((a, b) => lastPlayed(b) - lastPlayed(a))[0];
+  $('#continue-btn').hidden = !last;
+  if (last) {
+    $('#continue-cover').innerHTML = coverHTML(last.song.title);
+    $('#continue-title').textContent = last.song.title;
+    const b = best[last.id];
+    $('#continue-meta').textContent = `Practicada ${relativeDate(lastPlayed(last))}${b ? ` · récord ${b.grade}` : ''}`;
+    $('#continue-btn').onclick = () => openSongSheet(last);
+  }
+}
+
+function isPicking() {
+  return $('#songs').classList.contains('is-active');
+}
+
+function openPicker() {
+  closeAllDialogs();
+  showScreen('songs');
+  if (!history.state?.songs) history.pushState({ songs: true }, '');
+  renderLibrary();
+  scrollTo(0, 0);
+  if (matchMedia('(pointer: fine)').matches) $('#song-search').focus();
+}
+
+$('#practice-btn').addEventListener('click', openPicker);
+$('#songs-back').addEventListener('click', () => (history.state?.songs ? history.back() : showScreen('home')));
+$('#library').addEventListener('click', (e) => {
+  const card = e.target.closest('.song-card');
+  const entry = card && library.find((x) => x.id === card.dataset.id);
+  if (entry) openSongSheet(entry);
+});
+
+let searchFrame = 0;
+$('#song-search').addEventListener('input', (e) => {
+  query = e.target.value;
+  $('#search-clear').hidden = !query;
+  cancelAnimationFrame(searchFrame);
+  searchFrame = requestAnimationFrame(renderLibrary);
+});
+$('#search-clear').addEventListener('click', () => {
+  query = '';
+  $('#song-search').value = '';
+  $('#search-clear').hidden = true;
+  $('#song-search').focus();
+  renderLibrary();
+});
+$('#song-filters').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-filter]');
+  if (!b) return;
+  picker.filter = b.dataset.filter;
+  writeJSON('picker', picker);
+  renderLibrary();
+});
+$('#song-sort').addEventListener('change', (e) => {
+  picker.sort = e.target.value;
+  picker.dir = SORT_DEFAULT_DIR[picker.sort];
+  writeJSON('picker', picker);
+  renderLibrary();
+});
+$('#sort-dir').addEventListener('click', () => {
+  picker.dir = picker.dir === 'asc' ? 'desc' : 'asc';
+  writeJSON('picker', picker);
+  renderLibrary();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === '/' && isPicking() && document.activeElement !== $('#song-search') && !document.querySelector('dialog[open]')) {
+    e.preventDefault();
+    $('#song-search').focus();
+  }
+});
 
 function coverHTML(title) {
   let h = 0;
@@ -149,7 +329,7 @@ $('#file').addEventListener('change', (e) => {
 
 let dragDepth = 0;
 document.addEventListener('dragenter', (e) => {
-  if (!isHome() || !e.dataTransfer?.types.includes('Files')) return;
+  if (!isBrowsing() || !e.dataTransfer?.types.includes('Files')) return;
   dragDepth++;
   document.body.classList.add('dragging');
 });
@@ -161,7 +341,7 @@ document.addEventListener('drop', (e) => {
   e.preventDefault();
   dragDepth = 0;
   document.body.classList.remove('dragging');
-  if (isHome()) importFile(e.dataTransfer.files[0]);
+  if (isBrowsing()) importFile(e.dataTransfer.files[0]);
 });
 
 // =========================================================================
@@ -453,6 +633,9 @@ $('#open-settings-home').addEventListener('click', () => {
 // Game
 // =========================================================================
 
+function isBrowsing() {
+  return isHome() || isPicking();
+}
 function isHome() {
   return $('#home').classList.contains('is-active');
 }
@@ -468,6 +651,11 @@ function showScreen(id) {
 async function startGame(m) {
   if (!current?.song) return;
   mode = m;
+  if (returnTo !== 'editor') returnTo = isPicking() ? 'songs' : 'home';
+  if (m === 'mic' && current.id !== 'editor-preview') {
+    perSong[current.id] = { ...perSong[current.id], lastPlayed: Date.now() };
+    writeJSON('per-song', perSong);
+  }
   const btn = m === 'mic' ? $('#sing-btn') : $('#demo-btn');
   btn.disabled = true;
   const label = btn.querySelector('span') ?? btn;
@@ -575,7 +763,11 @@ window.addEventListener('popstate', () => {
     return;
   }
   if (isPlaying()) exitGame({ fromHistory: true });
-  else if (isEditing()) {
+  else if (isPicking() && !history.state?.songs) {
+    closeAllDialogs();
+    showScreen('home');
+    renderLibrary();
+  } else if (isEditing()) {
     // keep the editor until it confirms leaving (it may ask about unsaved changes)
     history.pushState({ editor: true }, '');
     editor.exit();
@@ -996,7 +1188,7 @@ let swReg = null;
 let waitingWorker = null;
 
 // Se puede actualizar sin molestar si estás en la biblioteca sin nada abierto.
-const canUpdateNow = () => isHome() && !document.querySelector('dialog[open]') && game.state !== 'playing';
+const canUpdateNow = () => isBrowsing() && !document.querySelector('dialog[open]') && game.state !== 'playing';
 
 function applyUpdate(worker = waitingWorker) {
   if (!worker || updating) return;

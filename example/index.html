@@ -48,12 +48,26 @@
       </div>
     </header>
 
-    <div class="home-hero">
-      <h1>¿Qué cantamos hoy?</h1>
-      <p>Elige una canción, ponte los auriculares y sigue las barras con tu voz.</p>
-    </div>
+    <button class="practice-cta" id="practice-btn" type="button">
+      <span class="practice-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
+      </span>
+      <span class="practice-text">
+        <strong>Practicar una canción</strong>
+        <small id="practice-count"></small>
+      </span>
+      <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </button>
 
-    <div class="library" id="library" role="list"></div>
+    <button class="continue-card" id="continue-btn" type="button" hidden>
+      <span id="continue-cover"></span>
+      <span class="continue-text">
+        <small>Seguir con</small>
+        <strong id="continue-title"></strong>
+        <span id="continue-meta"></span>
+      </span>
+      <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </button>
 
     <div class="home-actions">
       <button class="import-card create-card" id="create-song" type="button">
@@ -76,8 +90,58 @@
         </span>
       </label>
     </div>
+  </section>
 
-    <p class="home-foot">Consejo: usa auriculares para que el micrófono solo te oiga a ti.</p>
+  <!-- ============ SONG PICKER ============ -->
+  <section id="songs" class="screen" aria-label="Elegir canción">
+    <div class="songs-top">
+      <header class="songs-header">
+        <button class="icon-btn" id="songs-back" aria-label="Volver">
+          <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        <h1>Canciones</h1>
+        <span class="songs-count" id="songs-count"></span>
+      </header>
+      <div class="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+        <input id="song-search" type="search" placeholder="Buscar por título, artista o letra" autocomplete="off" spellcheck="false" aria-label="Buscar canciones">
+        <button class="search-clear" id="search-clear" aria-label="Borrar búsqueda" hidden>
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+      <div class="songs-controls">
+        <div class="filter-chips" id="song-filters" role="radiogroup" aria-label="Filtrar">
+          <button role="radio" data-filter="all">Todas</button>
+          <button role="radio" data-filter="own">Mías</button>
+          <button role="radio" data-filter="imported">Importadas</button>
+          <button role="radio" data-filter="builtin">Ejemplos</button>
+          <button role="radio" data-filter="record">Con récord</button>
+          <button role="radio" data-filter="new">Sin practicar</button>
+        </div>
+        <div class="sort">
+          <label class="sort-select">
+            <span class="visually-hidden">Ordenar por</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h11M4 12h7M4 17h4M18 5v14m0 0-3-3m3 3 3-3"/></svg>
+            <select id="song-sort" aria-label="Ordenar por">
+              <option value="title">Título</option>
+              <option value="artist">Artista</option>
+              <option value="duration">Duración</option>
+              <option value="added">Fecha añadida</option>
+              <option value="played">Última vez practicada</option>
+              <option value="record">Récord</option>
+            </select>
+          </label>
+          <button class="sort-dir" id="sort-dir" aria-label="Cambiar sentido del orden"></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="library" id="library" role="list"></div>
+    <div class="songs-empty" id="songs-empty" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+      <strong id="songs-empty-title">No hay canciones</strong>
+      <span id="songs-empty-text"></span>
+    </div>
   </section>
 
   <!-- ============ PLAY ============ -->

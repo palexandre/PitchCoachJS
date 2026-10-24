@@ -94,3 +94,12 @@ test('encodeWav genera un WAV PCM de 16 bits válido', async () => {
   assert.equal(v.getUint32(40, true), 100 * 2 * 2);
   assert.equal(wav.length, 44 + 400);
 });
+
+test('invertColor invierte hex, rgb y rgba y deja lo demás', async () => {
+  const { invertColor } = await import('../src/index.js');
+  assert.equal(invertColor('#170640'), '#e8f9bf');
+  assert.equal(invertColor('#fff'), '#000000');
+  assert.equal(invertColor('rgba(255,255,255,0.38)'), 'rgba(0,0,0,0.38)');
+  assert.equal(invertColor('rgb(31, 209, 181)'), 'rgb(224,46,74)');
+  assert.equal(invertColor('transparent'), 'transparent');
+});

@@ -184,7 +184,7 @@ export class PitchCoach extends Emitter {
     this.scorer?.setOptions(this._scorerOptions());
     if (this.renderer) {
       if ('transpose' in opts) this.renderer.transpose = this.options.transpose;
-      for (const k of ['notation', 'pixelsPerSecond', 'playheadPosition', 'insets', 'hud', 'lyricsLine', 'results']) {
+      for (const k of ['notation', 'pixelsPerSecond', 'playheadPosition', 'insets', 'hud', 'lyricsLine', 'results', 'invertColors']) {
         if (k in opts) this.renderer.options[k] = opts[k];
       }
     }

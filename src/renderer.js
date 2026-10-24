@@ -3,6 +3,7 @@
  * star particles, floating messages, HUD, progress bar and final results.
  */
 import { midiToName } from './notes.js';
+import { invertibleContext } from './colors.js';
 
 export const DEFAULT_THEME = {
   background: ['#2b0d6e', '#3a128c'],
@@ -47,14 +48,15 @@ export class Renderer {
    * @param {boolean} [opts.hud=true] score & combo
    * @param {boolean} [opts.lyricsLine=true] karaoke phrase at the bottom
    * @param {boolean} [opts.results=true] draw the final results over the canvas
+   * @param {boolean} [opts.invertColors=false] draw every color inverted (light theme from the dark one)
    * @param {{top?: number, bottom?: number}} [opts.insets] px reserved for your own overlays (toolbars, safe areas)
    * @param {object} [opts.theme] overrides DEFAULT_THEME
    * @param {object} [opts.labels] overrides DEFAULT_LABELS
    */
   constructor(canvas, opts = {}) {
     this.canvas = canvas;
-    this.ctx = canvas.getContext('2d');
-    this.options = { pixelsPerSecond: 'auto', playheadPosition: 0.3, notation: 'solfege', hud: true, lyricsLine: true, results: true, insets: {}, ...opts };
+    this.ctx = invertibleContext(canvas.getContext('2d'), () => this.options.invertColors);
+    this.options = { pixelsPerSecond: 'auto', playheadPosition: 0.3, notation: 'solfege', hud: true, lyricsLine: true, results: true, insets: {}, invertColors: false, ...opts };
     this.theme = { ...DEFAULT_THEME, ...opts.theme };
     this.labels = { ...DEFAULT_LABELS, ...opts.labels };
     this.particles = [];

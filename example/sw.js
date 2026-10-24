@@ -3,7 +3,7 @@
 // no edites a mano el bloque entre los marcadores.
 
 // <precache>
-const VERSION = 'eabc1af000';
+const VERSION = '1f45c5b2ef';
 const PRECACHE = [
   './',
   './app.js',
@@ -22,6 +22,7 @@ const PRECACHE = [
   './songs/martinillo.mid',
   './store.js',
   './style.css',
+  '../src/colors.js',
   '../src/emitter.js',
   '../src/formats/audio.js',
   '../src/formats/export.js',
@@ -51,7 +52,9 @@ const CACHE = `pitchcoach-${VERSION}`;
 const FONTS = 'pitchcoach-fonts';
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)));
+  // cache: 'reload' salta la caché HTTP del navegador (GitHub Pages guarda 10 min):
+  // sin esto, una versión nueva podía guardar archivos viejos mezclados con los nuevos.
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(PRECACHE.map((url) => new Request(url, { cache: 'reload' })))));
 });
 
 self.addEventListener('activate', (event) => {

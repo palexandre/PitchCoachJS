@@ -25,3 +25,19 @@ test('el manifiesto es válido y sus iconos existen', () => {
   assert.ok(m.icons.some((i) => i.sizes === '192x192' && i.purpose === 'any'));
   for (const i of m.icons) assert.ok(existsSync(new URL(i.src, example)), i.src);
 });
+
+test('al instalar una versión nueva se descargan los archivos del servidor, no de la caché HTTP', () => {
+  const sw = readFileSync(new URL('sw.js', example), 'utf8');
+  assert.match(sw, /cache: 'reload'/);
+});
+
+test('los estilos no usan filtros para invertir: cada color tiene su variable invertida', () => {
+  const css = readFileSync(new URL('style.css', example), 'utf8');
+  assert.doesNotMatch(css, /filter:\s*invert/);
+  const vars = [...css.matchAll(/--c-([0-9a-f]{6}): (\d+), (\d+), (\d+);/g)];
+  const byName = new Map();
+  for (const [, name, r, g, b] of vars) (byName.get(name) ?? byName.set(name, []).get(name)).push([+r, +g, +b]);
+  for (const [name, [orig, inv]] of byName) {
+    assert.deepEqual(inv, orig.map((v) => 255 - v), name);
+  }
+});

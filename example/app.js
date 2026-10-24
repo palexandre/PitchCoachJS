@@ -105,8 +105,10 @@ function renderLibrary() {
 function coverHTML(title) {
   let h = 0;
   for (const ch of title) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  const hue = h % 360;
-  return `<span class="cover" aria-hidden="true" style="--c1: hsl(${hue} 65% 42%); --c2: hsl(${(hue + 150) % 360} 80% 62%)"></span>`;
+  let hue = h % 360;
+  let [l1, l2] = [42, 62];
+  if (settings.theme === 'invertido') [hue, l1, l2] = [(hue + 180) % 360, 100 - l1, 100 - l2]; // color complementario
+  return `<span class="cover" aria-hidden="true" style="--c1: hsl(${hue} 65% ${l1}%); --c2: hsl(${(hue + 150) % 360} 80% ${l2}%)"></span>`;
 }
 
 function starsText(stars) {
@@ -233,11 +235,15 @@ document.querySelectorAll('[data-open-help]').forEach((b) => b.addEventListener(
 // ---- aspecto ---------------------------------------------------------------------
 
 function applyTheme(theme) {
+  const inverted = theme === 'invertido';
   document.documentElement.dataset.theme = theme;
+  game.set({ invertColors: inverted });
+  editor.invertColors = inverted;
+  editor.draw();
+  renderLibrary();
   // la barra del sistema en el móvil también se invierte
   $('meta[name="theme-color"]').content = theme === 'invertido' ? '#e8f9bf' : '#170640';
 }
-applyTheme(settings.theme);
 
 // ---- versión ----------------------------------------------------------------------
 
@@ -371,6 +377,7 @@ function syncSettingsUI() {
   $('#transpose').value = t > 0 ? `+${t}` : String(t);
   $('#tr-down').disabled = !current;
   $('#tr-up').disabled = !current;
+  $('#transpose-hint').textContent = current ? `Semitonos, solo para «${current.song.title}»` : 'Abre una canción para cambiar su tono';
   $('#octave').checked = settings.octaveTolerant;
   $('#guide').value = settings.guideVolume;
   $('#backing').value = settings.accompanimentVolume;
@@ -695,6 +702,8 @@ function fileName(title) {
   return (title || 'mi-cancion').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'mi-cancion';
 }
+
+applyTheme(settings.theme); // después de crear el juego y el editor, que también se colorean
 
 function showEditor() {
   closeAllDialogs();

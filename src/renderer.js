@@ -78,6 +78,10 @@ export class Renderer {
   setSong(song, transpose = 0) {
     this.song = song;
     this._chunkCache = null;
+    // que la cuarta parte más corta de las notas mida al menos ~44 px, para que se lea su sílaba
+    const durs = song.notes.map((n) => n.end - n.start).sort((a, b) => a - b);
+    const short = durs[Math.floor(durs.length * 0.25)];
+    this._songPps = short ? 44 / short : 0;
     this.transpose = transpose;
     this.clearEffects();
   }
@@ -115,7 +119,9 @@ export class Renderer {
   /** Pixels per second of song; 'auto' shows ~5 s on phones and ~7 s on wide screens. */
   get pps() {
     const v = this.options.pixelsPerSecond;
-    return v === 'auto' ? Math.max(95, Math.min(180, this.width / 5.5)) : v;
+    if (v !== 'auto') return v;
+    // ~5 s en pantalla, y más deprisa si la canción tiene muchas notas cortas
+    return Math.max(95, Math.min(260, Math.max(this.width / 5.5, this._songPps ?? 0)));
   }
 
   /** Visible pitch range, at least 1.5 octaves so small songs aren't stretched. */
@@ -287,6 +293,8 @@ export class Renderer {
     ctx.textBaseline = 'top';
     const lyricSize = Math.max(12, Math.min(17, bh + 2));
     ctx.font = this._font(lyricSize, 700);
+    const placed = []; // huecos ya ocupados por letras en este fotograma
+    const free = (r) => !placed.some((p) => r.x0 < p.x1 + 4 && r.x1 > p.x0 - 4 && r.y0 < p.y1 && r.y1 > p.y0);
 
     for (const n of song.notes) {
       if (n.end < t0) continue;
@@ -333,22 +341,37 @@ export class Renderer {
         if (st?.done) color = st.rating && st.rating !== 'miss' ? theme.hit : theme.lyricPast;
         else if (active) color = ratio > 0.5 ? theme.hit : theme.lyricPast;
         ctx.fillStyle = color;
-        // hasta donde empieza la nota siguiente; si no cabe, se recorta con «…»
-        const next = song.notes[n.index + 1];
-        const room = Math.max(x1 - x0, (next ? this.xFor(next.start, time) : Infinity) - x0 - 8);
-        // varias sílabas recitadas en una nota: se encoge la letra hasta un 65 % y solo después se recorta
-        const full = ctx.measureText(n.lyric).width;
-        const scale = full > room ? Math.max(0.65, room / full) : 1;
-        if (scale < 1) ctx.font = this._font(Math.round(lyricSize * scale), 700);
-        const text = fitText(ctx, n.lyric, room);
-        if (ctx.measureText(text).width <= x1 - x0) {
-          ctx.fillText(text, (x0 + x1) / 2, y + bh + 6);
-        } else {
-          ctx.textAlign = 'left';
-          ctx.fillText(text, x0, y + bh + 6);
-          ctx.textAlign = 'center';
+        // Se busca un hueco sin pisar otras letras: primero bajo la barra, luego una fila
+        // más abajo (como en los karaokes), y si hace falta con la letra algo más pequeña.
+        let spot = null;
+        for (const scale of [1, 0.82, 0.68]) {
+          const size = Math.round(lyricSize * scale);
+          ctx.font = this._font(size, 700);
+          const tw = ctx.measureText(n.lyric).width;
+          const left = tw <= x1 - x0 ? (x0 + x1 - tw) / 2 : x0; // centrada si cabe en la barra
+          for (const row of [0, 1]) {
+            const ty = y + bh + 6 + row * (lyricSize + 3);
+            const r = { x0: left, x1: left + tw, y0: ty, y1: ty + size };
+            if (free(r)) {
+              spot = { r, size, text: n.lyric };
+              break;
+            }
+          }
+          if (spot) break;
         }
-        if (scale < 1) ctx.font = this._font(lyricSize, 700);
+        if (!spot) {
+          // no hay hueco: segunda fila, pequeña y recortada al ancho de la barra
+          const size = Math.round(lyricSize * 0.68);
+          ctx.font = this._font(size, 700);
+          const text = fitText(ctx, n.lyric, Math.max(x1 - x0, 22));
+          const ty = y + bh + 6 + lyricSize + 3;
+          spot = { r: { x0, x1: x0 + ctx.measureText(text).width, y0: ty, y1: ty + size }, size, text };
+        }
+        ctx.textAlign = 'left';
+        ctx.fillText(spot.text, spot.r.x0, spot.r.y0);
+        ctx.textAlign = 'center';
+        placed.push(spot.r);
+        ctx.font = this._font(lyricSize, 700);
       }
     }
   }

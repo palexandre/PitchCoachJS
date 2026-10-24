@@ -170,11 +170,12 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
 .brand-name { font-size: 22px; font-weight: 900; letter-spacing: -0.3px; }
 
 
-.library { display: grid; gap: 12px; grid-template-columns: 1fr; }
-@media (min-width: 640px) { .library { grid-template-columns: repeat(2, 1fr); } }
-@media (min-width: 940px) { .library { grid-template-columns: repeat(3, 1fr); } }
+.library { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); } /* minmax(0…): un título largo no ensancha la lista */
+@media (min-width: 640px) { .library { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 940px) { .library { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
 .song-card {
+  min-width: 0;
   display: flex; align-items: center; gap: 14px; width: 100%;
   padding: 14px; text-align: left;
   border: 1px solid var(--line); border-radius: var(--radius);

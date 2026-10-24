@@ -556,3 +556,8 @@ kbd, code { padding: 1px 6px; border-radius: 6px; background: rgba(255, 255, 255
 }
 .best-clear:hover { background: rgba(255, 255, 255, 0.08); color: var(--danger); }
 .best-clear svg { width: 18px; height: 18px; }
+
+/* ---------- tema invertido: todos los colores al revés ---------- */
+html[data-theme="invertido"] { filter: invert(1); }
+/* los diálogos se pintan en una capa aparte del navegador: hay que invertirlos también */
+html[data-theme="invertido"] dialog { filter: invert(1); }

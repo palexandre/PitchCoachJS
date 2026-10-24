@@ -18,6 +18,7 @@ const DEFAULT_SETTINGS = {
   accompanimentVolume: 0.18,
   latency: 0.06,
   notation: 'solfege',
+  theme: 'invertido',
 };
 const DIFFICULTY_TEXT = {
   facil: ['Fácil', 'Margen de ±1 semitono'],
@@ -225,6 +226,15 @@ async function removeSong(id) {
 // Settings
 // =========================================================================
 
+// ---- aspecto ---------------------------------------------------------------------
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  // la barra del sistema en el móvil también se invierte
+  $('meta[name="theme-color"]').content = theme === 'invertido' ? '#e8f9bf' : '#170640';
+}
+applyTheme(settings.theme);
+
 // ---- tus datos ------------------------------------------------------------------
 
 function plural(n, one, many) {
@@ -337,6 +347,7 @@ function syncSettingsUI() {
 }
 
 function updateSetting(patch) {
+  if ('theme' in patch) applyTheme(patch.theme);
   Object.assign(settings, patch);
   writeJSON('settings', settings);
   game.set(patch);

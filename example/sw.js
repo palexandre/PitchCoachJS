@@ -3,7 +3,7 @@
 // no edites a mano el bloque entre los marcadores.
 
 // <precache>
-const VERSION = 'b0064820da';
+const VERSION = '5d465ecb24';
 const PRECACHE = [
   './',
   './app.js',

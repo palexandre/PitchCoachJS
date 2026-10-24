@@ -77,6 +77,7 @@ export class Renderer {
 
   setSong(song, transpose = 0) {
     this.song = song;
+    this._chunkCache = null;
     this.transpose = transpose;
     this.clearEffects();
   }
@@ -331,7 +332,17 @@ export class Renderer {
         if (st?.done) color = st.rating && st.rating !== 'miss' ? theme.hit : theme.lyricPast;
         else if (active) color = ratio > 0.5 ? theme.hit : theme.lyricPast;
         ctx.fillStyle = color;
-        ctx.fillText(n.lyric, (x0 + x1) / 2, y + bh + 6);
+        // hasta donde empieza la nota siguiente; si no cabe, se recorta con «…»
+        const next = song.notes[n.index + 1];
+        const room = Math.max(x1 - x0, (next ? this.xFor(next.start, time) : Infinity) - x0 - 8);
+        const text = fitText(ctx, n.lyric, room);
+        if (ctx.measureText(text).width <= x1 - x0) {
+          ctx.fillText(text, (x0 + x1) / 2, y + bh + 6);
+        } else {
+          ctx.textAlign = 'left';
+          ctx.fillText(text, x0, y + bh + 6);
+          ctx.textAlign = 'center';
+        }
       }
     }
   }
@@ -437,20 +448,58 @@ export class Renderer {
     }
   }
 
+  /**
+   * Parte una frase en trozos que caben en `maxW`, cortando entre palabras.
+   * Devuelve [{ notes: Note[], text }]. Se guarda en caché por frase y tamaño.
+   */
+  _lineChunks(li, maxW, size) {
+    const key = `${li}:${Math.round(maxW)}:${size}`;
+    this._chunkCache ??= new Map();
+    if (this._chunkCache.has(key)) return this._chunkCache.get(key);
+    const { ctx, song } = this;
+    const pieces = song.lines[li].notes.map((i) => song.notes[i]);
+    const chunks = [];
+    let cur = [];
+    let width = 0;
+    let lastBreak = -1; // posición en `cur` justo después de un final de palabra
+    for (const n of pieces) {
+      const w = ctx.measureText(n.piece).width;
+      if (cur.length && width + w > maxW) {
+        const cut = lastBreak > 0 ? lastBreak : cur.length;
+        chunks.push(cur.slice(0, cut));
+        cur = cur.slice(cut);
+        width = cur.reduce((s, p) => s + ctx.measureText(p.piece).width, 0);
+        lastBreak = -1;
+      }
+      cur.push(n);
+      width += w;
+      if (/\s$/.test(n.piece)) lastBreak = cur.length;
+    }
+    if (cur.length) chunks.push(cur);
+    const out = chunks.map((notes) => ({ notes, text: notes.map((n) => n.piece).join('').trim() }));
+    if (this._chunkCache.size > 200) this._chunkCache.clear();
+    this._chunkCache.set(key, out);
+    return out;
+  }
+
   _drawLyricsLine(f) {
     const { ctx, theme, song } = this;
     const time = f.time;
-    let li = song.lines.findIndex((l) => time < l.end + 0.25);
+    const li = song.lines.findIndex((l) => time < l.end + 0.25);
     if (li < 0) return;
-    const line = song.lines[li];
-    const next = song.lines[li + 1];
     const size = Math.max(16, Math.min(26, this.width / 34));
+    const maxW = this.width - 32;
     ctx.font = this._font(size, 800);
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'left';
-    const pieces = line.notes.map((i) => song.notes[i]);
+
+    // la frase entera si cabe; si no, el trozo que se está cantando
+    const chunks = this._lineChunks(li, maxW, size);
+    let ci = chunks.findIndex((c) => time < c.notes[c.notes.length - 1].end + 0.25);
+    if (ci < 0) ci = chunks.length - 1;
+    const pieces = chunks[ci].notes;
     const total = pieces.reduce((s, n) => s + ctx.measureText(n.piece).width, 0);
-    let x = (this.width - total) / 2;
+    let x = (this.width - Math.min(total, maxW)) / 2;
     const y = this.layout.lyricY;
 
     for (const n of pieces) {
@@ -478,11 +527,14 @@ export class Renderer {
       x += wPiece;
     }
 
-    if (next) {
-      ctx.font = this._font(Math.round(size * 0.62), 700);
+    // debajo, lo que viene: el siguiente trozo o la siguiente frase
+    const small = Math.round(size * 0.62);
+    ctx.font = this._font(small, 700);
+    const nextText = chunks[ci + 1]?.text ?? song.lines[li + 1]?.text.trim();
+    if (nextText) {
       ctx.textAlign = 'center';
       ctx.fillStyle = 'rgba(255,255,255,0.35)';
-      ctx.fillText(next.text.trim(), this.width / 2, y + size * 0.95);
+      ctx.fillText(fitText(ctx, nextText, maxW), this.width / 2, y + size * 0.95);
     }
   }
 
@@ -621,6 +673,19 @@ export class Renderer {
     ctx.fillText(`${labels.accuracy}: ${Math.round(r.percent * 100)}%   ·   ${labels.maxCombo}: ${r.maxCombo}`, w / 2, cy + 106);
     ctx.globalAlpha = 1;
   }
+}
+
+/** Recorta `text` con «…» para que no pase de `maxW` píxeles con la fuente actual. */
+function fitText(ctx, text, maxW) {
+  if (ctx.measureText(text).width <= maxW) return text;
+  let lo = 0;
+  let hi = text.length;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (ctx.measureText(`${text.slice(0, mid).trimEnd()}…`).width <= maxW) lo = mid;
+    else hi = mid - 1;
+  }
+  return lo ? `${text.slice(0, lo).trimEnd()}…` : '';
 }
 
 function roundRect(ctx, x, y, w, h, r) {

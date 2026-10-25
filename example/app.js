@@ -788,11 +788,10 @@ window.addEventListener('popstate', () => {
 // =========================================================================
 
 let micStream = null;
-let audioOk = null; // modo que funcionó en esta sesión: { ec, guide }; se olvida si cambian los dispositivos
+let audioOk = null; // lo que funcionó con altavoz en esta sesión: { ec, guide }
 const guard = new FeedbackGuard();
 const deviceAudio = readJSON('audio', {}); // { ecWorks: true|false } aprendido en este dispositivo
 
-navigator.mediaDevices?.addEventListener?.('devicechange', () => (audioOk = null));
 
 function releaseMic() {
   micStream?.getTracks().forEach((t) => t.stop());
@@ -831,19 +830,16 @@ async function prepareAudio(song) {
     return !leaking;
   };
   const done = (kind, ec, guide = true) => {
-    audioOk = { ec, guide };
+    if (kind !== 'headphones') audioOk = { ec, guide }; // con auriculares no se olvida lo elegido para el altavoz
     showAudioMode(kind);
     return { stream: micStream, guide };
   };
 
-  // lo que ya funcionó en esta sesión, si nada ha cambiado
-  if (audioOk && !audioOk.guide) {
-    releaseMic();
-    micStream = await openMicrophone();
-    return done('noguide', false, false);
-  }
-  if (await attempt(audioOk?.ec ?? false)) return done(audioOk?.ec ? 'ec' : 'headphones', !!audioOk?.ec);
-  if (!audioOk?.ec && deviceAudio.ecWorks && (await attempt(true))) return done('ec', true);
+  // siempre primero sin cancelación: si no se capta el altavoz, auriculares y guía normal
+  if (await attempt(false)) return done('headphones', false);
+  // con altavoz: lo que ya funcionó, sin volver a preguntar
+  if (audioOk && !audioOk.guide) return done('noguide', false, false);
+  if ((audioOk?.ec || deviceAudio.ecWorks) && (await attempt(true))) return done('ec', true);
 
   // el micrófono capta el altavoz: se pregunta
   return new Promise((resolve) => {

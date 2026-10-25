@@ -1,4 +1,4 @@
-import { PitchCoach, loadSong, midiToName, songToDraft, joinLyrics, draftToJSON, draftToMidi, songToWav } from '../src/index.js';
+import { PitchCoach, loadSong, midiToName, songToDraft, joinLyrics, draftToJSON, draftToMidi, songToWav, openMicrophone, checkFeedback, FeedbackGuard } from '../src/index.js';
 import { readJSON, writeJSON, removeJSON, clearAllJSON, listImported, saveImported, deleteImported, clearImported } from './store.js';
 import { SongEditor, emptyDraft, EDITOR_DEFAULTS } from './editor.js';
 import { lightColor } from './theme.js';
@@ -664,6 +664,8 @@ async function startGame(m) {
 
   try {
     closeAllDialogs();
+    game.stop();
+    releaseMic();
     game.audioContext ??= audio();
     showScreen('play');
     if (!history.state?.play) history.pushState({ play: true }, '');
@@ -673,7 +675,17 @@ async function startGame(m) {
     $('#hud-title').textContent = current.song.title;
     $('#mode-badge').hidden = m !== 'demo';
     resetHud();
-    await game.start({ input: m });
+    let input = m;
+    if (m === 'mic') {
+      const audioSetup = await prepareAudio(current.song);
+      if (!audioSetup) return exitGame();
+      input = audioSetup.stream;
+      if (!audioSetup.guide) game.set({ guideVolume: 0, accompanimentVolume: 0 });
+    } else {
+      showAudioMode(null);
+    }
+    guard.reset();
+    await game.start({ input });
     keepAwake(true);
   } catch (err) {
     exitGame({ fromHistory: false });
@@ -688,6 +700,7 @@ async function startGame(m) {
 
 function exitGame({ fromHistory = false } = {}) {
   game.stop();
+  releaseMic();
   game.setLoop(null);
   keepAwake(false);
   closeAllDialogs();
@@ -720,11 +733,7 @@ $('#pause-btn').addEventListener('click', pauseGame);
 $('#pause-menu').addEventListener('click', (e) => {
   const action = e.target.closest('[data-action]')?.dataset.action;
   if (action === 'resume') resumeGame();
-  if (action === 'restart') {
-    closeDialog($('#pause-menu'));
-    resetHud();
-    game.start({ input: mode });
-  }
+  if (action === 'restart') startGame(mode);
   if (action === 'loop') {
     if (game.loopRange) game.setLoop(null);
     else {
@@ -772,6 +781,132 @@ window.addEventListener('popstate', () => {
     history.pushState({ editor: true }, '');
     editor.exit();
   }
+});
+
+// =========================================================================
+// Audio: auriculares, cancelación de eco o sin guía
+// =========================================================================
+
+let micStream = null;
+let audioOk = null; // modo que funcionó en esta sesión: { ec, guide }; se olvida si cambian los dispositivos
+const guard = new FeedbackGuard();
+const deviceAudio = readJSON('audio', {}); // { ecWorks: true|false } aprendido en este dispositivo
+
+navigator.mediaDevices?.addEventListener?.('devicechange', () => (audioOk = null));
+
+function releaseMic() {
+  micStream?.getTracks().forEach((t) => t.stop());
+  micStream = null;
+}
+
+const AUDIO_ICONS = {
+  headphones: ['Auriculares', '<path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4.5" height="6" rx="1.5"/><rect x="16.5" y="14" width="4.5" height="6" rx="1.5"/>'],
+  ec: ['Cancelación de eco', '<path d="M4 9.5h3l4.5-4v13L7 14.5H4z"/><path d="M15.5 9a4 4 0 0 1 0 6"/>'],
+  noguide: ['Sin guía', '<path d="M4 9.5h3l4.5-4v13L7 14.5H4z"/><path d="m16 9.5 5 5m0-5-5 5"/>'],
+};
+
+function showAudioMode(kind) {
+  const el = $('#audio-mode');
+  el.hidden = !kind;
+  if (!kind) return;
+  const [label, path] = AUDIO_ICONS[kind];
+  el.title = label;
+  el.setAttribute('aria-label', label);
+  el.innerHTML = `<svg viewBox="0 0 24 24">${path}</svg>`;
+}
+
+/** Abre el micrófono y comprueba que no capta el altavoz. Devuelve { stream, guide } o null si se cancela. */
+async function prepareAudio(song) {
+  const ctx = audio();
+  showAudioMode(null);
+  const midis = [...new Set(song.notes.map((n) => n.midi + transposeOf(current)))].slice(0, 4);
+  const volume = Math.max(0.15, settings.guideVolume) * 0.6;
+  const liveText = $('#live-text');
+  const attempt = async (ec) => {
+    releaseMic();
+    micStream = await openMicrophone({ echoCancellation: ec });
+    liveText.textContent = 'Comprobando audio…';
+    const { leaking } = await checkFeedback({ audioContext: ctx, stream: micStream, midis, volume });
+    liveText.textContent = 'Canta…';
+    return !leaking;
+  };
+  const done = (kind, ec, guide = true) => {
+    audioOk = { ec, guide };
+    showAudioMode(kind);
+    return { stream: micStream, guide };
+  };
+
+  // lo que ya funcionó en esta sesión, si nada ha cambiado
+  if (audioOk && !audioOk.guide) {
+    releaseMic();
+    micStream = await openMicrophone();
+    return done('noguide', false, false);
+  }
+  if (await attempt(audioOk?.ec ?? false)) return done(audioOk?.ec ? 'ec' : 'headphones', !!audioOk?.ec);
+  if (!audioOk?.ec && deviceAudio.ecWorks && (await attempt(true))) return done('ec', true);
+
+  // el micrófono capta el altavoz: se pregunta
+  return new Promise((resolve) => {
+    const d = $('#audio-check');
+    const err = $('#audio-error');
+    const ecBtn = d.querySelector('[data-choice="ec"]');
+    err.hidden = true;
+    ecBtn.disabled = deviceAudio.ecWorks === false;
+    $('#ec-caption').hidden = !ecBtn.disabled;
+    openDialog(d);
+
+    const finish = (value) => {
+      d.removeEventListener('click', onClick);
+      d.removeEventListener('cancel', onCancel);
+      closeDialog(d);
+      resolve(value);
+    };
+    const onCancel = (e) => {
+      e.preventDefault();
+      finish(null);
+    };
+    const onClick = async (e) => {
+      const btn = e.target.closest('[data-choice]');
+      if (!btn || btn.classList.contains('busy')) return;
+      const choice = btn.dataset.choice;
+      if (choice === 'cancel') return finish(null);
+      if (choice === 'noguide') {
+        releaseMic();
+        micStream = await openMicrophone();
+        return finish(done('noguide', false, false));
+      }
+      btn.classList.add('busy');
+      err.hidden = true;
+      const ok = await attempt(choice === 'ec');
+      btn.classList.remove('busy');
+      if (choice === 'ec') {
+        deviceAudio.ecWorks = ok;
+        writeJSON('audio', deviceAudio);
+      }
+      if (ok) return finish(done(choice === 'ec' ? 'ec' : 'headphones', choice === 'ec'));
+      if (choice === 'ec') {
+        ecBtn.disabled = true;
+        $('#ec-caption').hidden = false;
+      } else {
+        err.hidden = false;
+      }
+    };
+    d.addEventListener('click', onClick);
+    d.addEventListener('cancel', onCancel);
+  });
+}
+
+// Durante la partida: si la app se oye a sí misma, se para y se vuelve a preguntar.
+game.on('frame', (f) => mode === 'mic' && guard.frame(f));
+game.on('note', (e) => {
+  if (mode !== 'mic' || !audioOk?.guide || !guard.note(e)) return;
+  audioOk = null;
+  if (deviceAudio.ecWorks && $('#audio-mode').title === 'Cancelación de eco') {
+    deviceAudio.ecWorks = false;
+    writeJSON('audio', deviceAudio);
+  }
+  game.pause();
+  setTimeout(() => startGame('mic')); // fuera del fotograma en curso
 });
 
 // =========================================================================
@@ -1055,12 +1190,7 @@ function countUp(el, target, ms) {
 
 $('#results').addEventListener('click', (e) => {
   const action = e.target.closest('[data-action]')?.dataset.action;
-  if (action === 'again') {
-    closeDialog($('#results'));
-    resetHud();
-    game.start({ input: mode });
-    keepAwake(true);
-  }
+  if (action === 'again') startGame(mode);
   if (action === 'library') exitGame();
 });
 $('#results').addEventListener('cancel', (e) => {

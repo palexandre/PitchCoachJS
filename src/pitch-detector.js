@@ -55,6 +55,17 @@ export function yin(buf, sampleRate, { threshold = 0.12, minFreq = 65, maxFreq =
   return { freq: sampleRate / (tau + shift), clarity: 1 - b };
 }
 
+/**
+ * Opens the microphone for singing: no automatic gain or noise suppression.
+ * @param {{echoCancellation?: boolean}} [opts]
+ * @returns {Promise<MediaStream>}
+ */
+export function openMicrophone({ echoCancellation = false } = {}) {
+  return navigator.mediaDevices.getUserMedia({
+    audio: { echoCancellation, noiseSuppression: false, autoGainControl: false },
+  });
+}
+
 export class PitchDetector extends Emitter {
   /**
    * @param {object} [opts]
@@ -89,8 +100,10 @@ export class PitchDetector extends Emitter {
    * @param {object} [opts]
    * @param {MediaStream|AudioNode} [opts.input] defaults to the microphone
    * @param {boolean} [opts.loop=true] emit 'pitch' every animation frame; set false and call read() yourself
+   * @param {boolean} [opts.echoCancellation=false] when opening the microphone: remove what the speaker plays
+   *   (useful without headphones; noise suppression stays off because it mutes sustained sung notes)
    */
-  async start({ input, loop = true } = {}) {
+  async start({ input, loop = true, echoCancellation = false } = {}) {
     if (this.running) this.stop();
     this.audioContext ??= new AudioContext();
     if (this.audioContext.state === 'suspended') await this.audioContext.resume();
@@ -103,9 +116,8 @@ export class PitchDetector extends Emitter {
     if (input instanceof AudioNode) {
       this.source = input;
     } else {
-      this.stream = input ?? (await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-      }));
+      this._ownStream = !input; // a stream passed in belongs to the caller, who stops it
+      this.stream = input ?? (await openMicrophone({ echoCancellation }));
       this.source = ctx.createMediaStreamSource(this.stream);
     }
     this.source.connect(this.analyser);
@@ -125,7 +137,7 @@ export class PitchDetector extends Emitter {
     try {
       this.source?.disconnect(this.analyser);
     } catch { /* already disconnected */ }
-    this.stream?.getTracks().forEach((t) => t.stop());
+    if (this._ownStream) this.stream?.getTracks().forEach((t) => t.stop());
     this.analyser = this.stream = this.source = null;
     this._history = [];
     this.emit('stop');

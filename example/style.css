@@ -745,3 +745,19 @@ kbd, code { padding: 1px 6px; border-radius: 6px; background: rgba(var(--c-fffff
 }
 /* se nota que hay más filtros deslizando */
 .filter-chips { -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); padding-right: 24px; }
+
+/* comprobación de audio */
+.audio-check { padding-top: 28px; }
+.audio-check h2 { margin: 12px 0 6px; }
+.audio-check > p { margin: 0 0 18px; line-height: 1.45; }
+.audio-check-icon { display: inline-grid; place-items: center; width: 64px; height: 64px; border-radius: 20px; background: rgba(var(--c-1fd1b5), 0.12); color: rgb(var(--c-1fd1b5)); }
+.audio-check-icon svg { width: 34px; height: 34px; }
+.audio-error { margin: -8px 0 16px !important; color: rgb(var(--c-ff7a8a)); font-weight: 800; font-size: 14px; }
+.choice-ec { flex-direction: column; gap: 2px; }
+.choice-ec small { font-size: 12px; font-weight: 700; color: rgba(var(--c-f6f0df), 0.62); }
+.choice-ec:disabled { opacity: 0.55; }
+.btn.busy { pointer-events: none; opacity: 0.7; }
+
+.hud-title-row { display: flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0; }
+.audio-mode { flex: none; display: grid; place-items: center; width: 18px; height: 18px; color: rgba(var(--c-f6f0df), 0.62); }
+.audio-mode svg { width: 16px; height: 16px; }

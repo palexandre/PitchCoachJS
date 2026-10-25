@@ -22,6 +22,7 @@ La página de ejemplo es una app completa y responsive (móvil primero):
 - **Inicio**: un botón para **practicar una canción**, acceso rápido a la última que practicaste, **crear** e **importar**.
 - **Selector de canciones**: buscador por título, artista o letra (sin importar tildes ni mayúsculas), filtros (Todas, Mías, Importadas, Ejemplos, Con récord, Sin practicar) y orden por título, artista, duración, fecha añadida, última vez practicada o récord. Pensado para cientos de canciones.
 - **Ficha de canción** (hoja inferior en móvil): duración, notas, tesitura, récord y un resumen de ajustes. **Cantar** pide el micrófono; **Escuchar demo** se canta sola enviando la guía al detector.
+- **Comprobación de audio** al empezar a cantar: si el micrófono capta el altavoz, propone auriculares, cancelación de eco (solo si funciona en ese dispositivo) o cantar sin guía. Durante la partida, si la app se oye a sí misma, se detiene y vuelve a preguntar.
 - **Partida a pantalla completa**: solo el escenario, la pausa, la nota que estás cantando y la puntuación. Respeta el notch, mantiene la pantalla encendida y se pausa al cambiar de app.
 - **Pausa**: continuar, repetir la frase actual en bucle, empezar de nuevo, ajustes o salir. Espacio/Esc también pausan; el botón atrás del móvil sale.
 - **Ajustes** (dificultad, velocidad, tono por canción, octava, volúmenes, retraso del micro, Do-Re-Mi/C-D-E, pista de la voz en MIDI) guardados entre sesiones.

@@ -154,7 +154,10 @@
       </button>
 
       <div class="hud-center">
-        <div class="hud-title" id="hud-title"></div>
+        <div class="hud-title-row">
+          <span class="audio-mode" id="audio-mode" hidden></span>
+          <div class="hud-title" id="hud-title"></div>
+        </div>
         <div class="live-note" id="live-note" aria-live="off">
           <span class="live-dot"></span><span id="live-text">Canta…</span>
         </div>
@@ -385,6 +388,28 @@
       </button>
     </div>
     <button class="btn btn-ghost" data-close>Cancelar</button>
+  </dialog>
+
+  <!-- ============ AUDIO CHECK ============ -->
+  <dialog class="modal audio-check" id="audio-check" aria-labelledby="audio-check-title">
+    <span class="audio-check-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M4 9.5h3l4.5-4v13L7 14.5H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg>
+    </span>
+    <h2 id="audio-check-title">Usa auriculares</h2>
+    <p class="muted">El micrófono capta el sonido del altavoz.</p>
+    <p class="audio-error" id="audio-error" role="alert" hidden>Se sigue captando el altavoz.</p>
+    <div class="menu">
+      <button class="btn btn-primary btn-lg" data-choice="retry">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4.5" height="6" rx="1.5"/><rect x="16.5" y="14" width="4.5" height="6" rx="1.5"/></svg>
+        <span>Auriculares conectados</span>
+      </button>
+      <button class="btn choice-ec" data-choice="ec">
+        <span>Usar cancelación de eco</span>
+        <small id="ec-caption" hidden>No disponible en este dispositivo</small>
+      </button>
+      <button class="btn" data-choice="noguide">Cantar sin guía</button>
+      <button class="btn btn-ghost" data-choice="cancel">Cancelar</button>
+    </div>
   </dialog>
 
   <!-- ============ CONFIRM ============ -->

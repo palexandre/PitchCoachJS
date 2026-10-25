@@ -650,8 +650,12 @@ function showScreen(id) {
   document.body.classList.toggle('playing', id === 'play' || id === 'editor');
 }
 
+let gameRun = 0; // cambia en cada arranque y al salir: lo que llegue tarde de un arranque viejo se descarta
+
 async function startGame(m) {
   if (!current?.song) return;
+  const run = ++gameRun;
+  const stale = () => run !== gameRun || !isPlaying();
   mode = m;
   if (returnTo !== 'editor') returnTo = isPicking() ? 'songs' : 'home';
   if (m === 'mic' && current.id !== 'editor-preview') {
@@ -680,6 +684,7 @@ async function startGame(m) {
     let input = m;
     if (m === 'mic') {
       const audioSetup = await prepareAudio(current.song);
+      if (stale()) return releaseMic(); // saliste durante la comprobación
       if (!audioSetup) return exitGame();
       input = audioSetup.stream;
       if (!audioSetup.guide) game.set({ guideVolume: 0, accompanimentVolume: 0 });
@@ -688,8 +693,14 @@ async function startGame(m) {
     }
     guard.reset();
     await game.start({ input });
+    if (stale()) {
+      game.stop();
+      releaseMic();
+      return;
+    }
     keepAwake(true);
   } catch (err) {
+    if (stale()) return;
     exitGame({ fromHistory: false });
     toast(err.name === 'NotAllowedError'
       ? 'Necesito permiso para usar el micrófono. Actívalo en los ajustes del navegador.'
@@ -701,6 +712,9 @@ async function startGame(m) {
 }
 
 function exitGame({ fromHistory = false } = {}) {
+  gameRun++;
+  audioAbort?.abort(); // corta una comprobación de audio en curso
+  audioPrompt?.(null); // y cierra el aviso si estaba abierto
   game.stop();
   releaseMic();
   game.setLoop(null);
@@ -790,6 +804,8 @@ window.addEventListener('popstate', () => {
 // =========================================================================
 
 let micStream = null;
+let audioAbort = null; // AbortController de la comprobación en curso
+let audioPrompt = null; // resuelve el aviso abierto
 let audioOk = null; // lo que funcionó con altavoz en esta sesión: { ec, guide }
 const guard = new FeedbackGuard();
 const deviceAudio = readJSON('audio', {}); // { ecWorks: true|false } aprendido en este dispositivo
@@ -827,8 +843,11 @@ async function prepareAudio(song) {
     releaseMic();
     micStream = await openMicrophone({ echoCancellation: ec });
     liveText.textContent = 'Comprobando audio…';
-    const { leaking } = await checkFeedback({ audioContext: ctx, stream: micStream, midis, volume });
+    audioAbort = new AbortController();
+    const { leaking, aborted } = await checkFeedback({ audioContext: ctx, stream: micStream, midis, volume, signal: audioAbort.signal });
+    audioAbort = null;
     liveText.textContent = 'Canta…';
+    if (aborted) throw new DOMException('Comprobación cancelada', 'AbortError');
     return !leaking;
   };
   const done = (kind, ec, guide = true) => {
@@ -854,11 +873,13 @@ async function prepareAudio(song) {
     openDialog(d);
 
     const finish = (value) => {
+      audioPrompt = null;
       d.removeEventListener('click', onClick);
       d.removeEventListener('cancel', onCancel);
       closeDialog(d);
       resolve(value);
     };
+    audioPrompt = finish;
     const onCancel = (e) => {
       e.preventDefault();
       finish(null);
@@ -1246,24 +1267,32 @@ async function keepAwake(on) {
 // ---- dialogs ----------------------------------------------------------------------
 
 function openDialog(d) {
-  d.classList.remove('closing');
+  cancelPendingClose(d);
   if (!d.open) d.showModal();
+}
+
+/** Un cierre animado pendiente no debe cerrar la ventana la próxima vez que se abra. */
+function cancelPendingClose(d) {
+  if (d._closeDone) d.removeEventListener('animationend', d._closeDone);
+  d._closeDone = null;
+  d.classList.remove('closing');
 }
 
 function closeDialog(d) {
   if (!d.open || d.classList.contains('closing')) return;
   d.classList.add('closing');
   const done = () => {
-    d.classList.remove('closing');
+    cancelPendingClose(d);
     d.close();
   };
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) done();
-  else d.addEventListener('animationend', done, { once: true });
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return done();
+  d._closeDone = done;
+  d.addEventListener('animationend', done, { once: true });
 }
 
 function closeAllDialogs() {
   document.querySelectorAll('dialog[open]').forEach((d) => {
-    d.classList.remove('closing');
+    cancelPendingClose(d);
     d.close();
   });
 }

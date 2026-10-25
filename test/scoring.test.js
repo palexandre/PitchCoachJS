@@ -94,22 +94,23 @@ test('legatoGroups liga las sílabas seguidas a la misma altura, sin tocar las d
   assert.deepEqual(g.map((x) => [x.start, x.end, x.midi, x.count]), [[0, 1.5, 60, 3], [1.5, 2, 62, 1], [2.5, 3, 62, 1]]);
 });
 
+let i0 = 0;
 test('FeedbackGuard distingue la guía oída por el micrófono de una voz humana', async () => {
   const { FeedbackGuard } = await import('../src/index.js');
-  const notes = [0, 1, 2, 3].map((i) => ({ start: i, end: i + 0.9 }));
-  const run = (centsAt, onset) => {
+  const notes = [0, 1, 2, 3, 4, 5].map((i) => ({ start: i, end: i + 0.9 }));
+  const run = (centsAt, onsetOf) => {
     const g = new FeedbackGuard();
     let alarm = false;
-    for (const note of notes) {
-      for (let t = note.start + onset; t < note.end; t += 1 / 60) g.frame({ time: t, pitch: { note, hit: true, cents: centsAt(t) } });
+    notes.forEach((note, i) => {
+      for (let t = note.start + onsetOf(i); t < note.end; t += 1 / 60) g.frame({ time: t, pitch: { note, hit: true, cents: centsAt(t) } });
       alarm ||= g.note({ note });
-    }
+    });
     return alarm;
   };
-  // guía sintética: tono clavado y a la vez que la nota
-  assert.equal(run(() => 1, 0.03), true);
-  // voz: oscila unos cents (vibrato suave) y entra con algo de retraso
-  assert.equal(run((t) => 12 * Math.sin(t * 30), 0.15), false);
-  // voz muy afinada pero humana: también oscila
-  assert.equal(run((t) => 6 * Math.sin(t * 25) + 3 * Math.sin(t * 7), 0.04), false);
+  // eco de la guía en un móvil: tono clavado y siempre el mismo retraso (aquí 0,18 s)
+  assert.equal(run(() => 1 + Math.sin(i0++) * 0.5, () => 0.18), true);
+  // voz con vibrato: oscila
+  assert.equal(run((t) => 12 * Math.sin(t * 30), () => 0.15), false);
+  // voz muy afinada y casi sin vibrato: entra cada vez con un retraso distinto
+  assert.equal(run((t) => 2 * Math.sin(t * 9), (i) => [0.05, 0.16, 0.09, 0.22, 0.04, 0.13][i]), false);
 });

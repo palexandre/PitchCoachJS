@@ -507,6 +507,7 @@ async function clearData(kind) {
     Object.assign(settings, DEFAULT_SETTINGS);
     forget(perSong);
     Object.assign(editor.prefs, EDITOR_DEFAULTS);
+    forgetSpeakerMode();
     editor.clearAutosave();
     game.set({ ...settings });
     editor.keyboard.setNotation(settings.notation);
@@ -548,6 +549,7 @@ function openSettings() {
 
 function syncSettingsUI() {
   syncDataUI();
+  syncSpeakerUI();
   showVersion();
   document.querySelectorAll('.segmented[data-setting]').forEach((seg) => {
     const key = seg.dataset.setting;
@@ -891,6 +893,26 @@ async function prepareAudio(song) {
     d.addEventListener('cancel', onCancel);
   });
 }
+
+/** Qué se hace cuando suena por el altavoz, para Ajustes. */
+function syncSpeakerUI() {
+  const learned = audioOk || deviceAudio.ecWorks !== undefined;
+  $('#speaker-mode').textContent = audioOk && !audioOk.guide ? 'Sin guía'
+    : audioOk?.ec || deviceAudio.ecWorks ? 'Cancelación de eco' : 'Preguntar';
+  $('#speaker-reset').disabled = !learned;
+}
+
+function forgetSpeakerMode() {
+  audioOk = null;
+  delete deviceAudio.ecWorks;
+  removeJSON('audio');
+}
+
+$('#speaker-reset').addEventListener('click', () => {
+  forgetSpeakerMode();
+  syncSpeakerUI();
+  toast('Se preguntará en la próxima canción');
+});
 
 // Durante la partida: si la app se oye a sí misma, se para y se vuelve a preguntar.
 game.on('frame', (f) => mode === 'mic' && guard.frame(f));

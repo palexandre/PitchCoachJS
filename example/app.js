@@ -6,7 +6,6 @@ import { lightColor } from './theme.js';
 const $ = (sel) => document.querySelector(sel);
 
 const BUILTIN = [
-  { id: 'songs/nunc-dimittis.json', artist: 'Completas' },
   { id: 'songs/responsorio-breve.json', artist: 'Completas' },
   { id: 'songs/escala.json', artist: 'Calentamiento' },
 ];

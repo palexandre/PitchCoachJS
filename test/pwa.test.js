@@ -12,7 +12,7 @@ test('sw.js está al día con los archivos de la app (ejecuta `npm run pwa`)', (
 
 test('la caché incluye todo lo que la app necesita sin conexión', () => {
   const urls = precacheList().map((f) => f.url);
-  for (const u of ['./index.html', './app.js', './editor.js', './style.css', './manifest.webmanifest', '../src/index.js', '../src/keyboard.js', './songs/martinillo.mid']) {
+  for (const u of ['./index.html', './app.js', './editor.js', './style.css', './manifest.webmanifest', '../src/index.js', '../src/keyboard.js', './songs/responsorio-breve.json']) {
     assert.ok(urls.includes(u), u);
   }
 });

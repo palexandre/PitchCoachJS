@@ -1,0 +1,384 @@
+{
+ "title": "Responsorio breve",
+ "artist": "Completas",
+ "notes": [
+  {
+   "time": 0,
+   "duration": 0.273,
+   "pitch": 66,
+   "lyric": "A"
+  },
+  {
+   "time": 0.273,
+   "duration": 0.273,
+   "pitch": 66,
+   "lyric": "tus"
+  },
+  {
+   "time": 0.545,
+   "duration": 0.273,
+   "pitch": 66,
+   "lyric": "ma-"
+  },
+  {
+   "time": 0.818,
+   "duration": 0.545,
+   "pitch": 64,
+   "lyric": "nos,"
+  },
+  {
+   "time": 1.364,
+   "duration": 0.545,
+   "pitch": 62,
+   "lyric": "Se-"
+  },
+  {
+   "time": 1.909,
+   "duration": 1.091,
+   "pitch": 64,
+   "lyric": "ñor,"
+  },
+  {
+   "time": 3,
+   "duration": 0.273,
+   "pitch": 59,
+   "lyric": "en-"
+  },
+  {
+   "time": 3.273,
+   "duration": 0.273,
+   "pitch": 59,
+   "lyric": "co-"
+  },
+  {
+   "time": 3.545,
+   "duration": 0.273,
+   "pitch": 59,
+   "lyric": "mien-"
+  },
+  {
+   "time": 3.818,
+   "duration": 0.273,
+   "pitch": 59,
+   "lyric": "do"
+  },
+  {
+   "time": 4.091,
+   "duration": 0.545,
+   "pitch": 57,
+   "lyric": "mi"
+  },
+  {
+   "time": 4.636,
+   "duration": 0.545,
+   "pitch": 59,
+   "lyric": "es-"
+  },
+  {
+   "time": 5.182,
+   "duration": 0.545,
+   "pitch": 62,
+   "lyric": "pí-"
+  },
+  {
+   "time": 5.727,
+   "duration": 0.273,
+   "pitch": 62,
+   "lyric": "ri-"
+  },
+  {
+   "time": 6,
+   "duration": 1.091,
+   "pitch": 62,
+   "lyric": "tu."
+  },
+  {
+   "time": 7.636,
+   "duration": 0.273,
+   "pitch": 66,
+   "lyric": "/Tú,"
+  },
+  {
+   "time": 7.909,
+   "duration": 0.273,
+   "pitch": 66,
+   "lyric": "el"
+  },
+  {
+   "time": 8.182,
+   "duration": 0.273,
+   "pitch": 66,
+   "lyric": "Dios"
+  },
+  {
+   "time": 8.455,
+   "duration": 0.273,
+   "pitch": 66,
+   "lyric": "le-"
+  },
+  {
+   "time": 8.727,
+   "duration": 0.273,
+   "pitch": 66,
+   "lyric": "al,"
+  },
+  {
+   "time": 9,
+   "duration": 0.273,
+   "pitch": 66,
+   "lyric": "nos"
+  },
+  {
+   "time": 9.273,
+   "duration": 0.545,
+   "pitch": 64,
+   "lyric": "li-"
+  },
+  {
+   "time": 9.818,
+   "duration": 0.545,
+   "pitch": 62,
+   "lyric": "bra-"
+  },
+  {
+   "time": 10.364,
+   "duration": 1.091,
+   "pitch": 64,
+   "lyric": "rás."
+  },
+  {
+   "time": 12,
+   "duration": 0.273,
+   "pitch": 59,
+   "lyric": "/En-"
+  },
+  {
+   "time": 12.273,
+   "duration": 0.273,
+   "pitch": 59,
+   "lyric": "co-"
+  },
+  {
+   "time": 12.545,
+   "duration": 0.273,
+   "pitch": 59,
+   "lyric": "mien-"
+  },
+  {
+   "time": 12.818,
+   "duration": 0.273,
+   "pitch": 59,
+   "lyric": "do"
+  },
+  {
+   "time": 13.091,
+   "duration": 0.545,
+   "pitch": 57,
+   "lyric": "mi"
+  },
+  {
+   "time": 13.636,
+   "duration": 0.545,
+   "pitch": 59,
+   "lyric": "es-"
+  },
+  {
+   "time": 14.182,
+   "duration": 0.545,
+   "pitch": 62,
+   "lyric": "pí-"
+  },
+  {
+   "time": 14.727,
+   "duration": 0.273,
+   "pitch": 62,
+   "lyric": "ri-"
+  },
+  {
+   "time": 15,
+   "duration": 1.091,
+   "pitch": 62,
+   "lyric": "tu."
+  },
+  {
+   "time": 16.636,
+   "duration": 0.273,
+   "pitch": 66,
+   "lyric": "/Glo-"
+  },
+  {
+   "time": 16.909,
+   "duration": 0.273,
+   "pitch": 66,
+   "lyric": "ria al"
+  },
+  {
+   "time": 17.182,
+   "duration": 0.273,
+   "pitch": 66,
+   "lyric": "Pa-"
+  },
+  {
+   "time": 17.455,
+   "duration": 0.273,
+   "pitch": 66,
+   "lyric": "dre,"
+  },
+  {
+   "time": 17.727,
+   "duration": 0.273,
+   "pitch": 66,
+   "lyric": "al"
+  },
+  {
+   "time": 18,
+   "duration": 0.545,
+   "pitch": 64,
+   "lyric": "Hi-"
+  },
+  {
+   "time": 18.545,
+   "duration": 0.545,
+   "pitch": 62,
+   "lyric": "jo"
+  },
+  {
+   "time": 19.091,
+   "duration": 0.545,
+   "pitch": 64,
+   "lyric": "y"
+  },
+  {
+   "time": 19.636,
+   "duration": 0.273,
+   "pitch": 59,
+   "lyric": "al"
+  },
+  {
+   "time": 19.909,
+   "duration": 0.273,
+   "pitch": 59,
+   "lyric": "Es-"
+  },
+  {
+   "time": 20.182,
+   "duration": 0.273,
+   "pitch": 59,
+   "lyric": "pí-"
+  },
+  {
+   "time": 20.455,
+   "duration": 0.273,
+   "pitch": 59,
+   "lyric": "ri-"
+  },
+  {
+   "time": 20.727,
+   "duration": 0.273,
+   "pitch": 59,
+   "lyric": "tu"
+  },
+  {
+   "time": 21,
+   "duration": 0.545,
+   "pitch": 57,
+   "lyric": "San-"
+  },
+  {
+   "time": 21.545,
+   "duration": 1.091,
+   "pitch": 62,
+   "lyric": "to."
+  },
+  {
+   "time": 23.182,
+   "duration": 0.273,
+   "pitch": 66,
+   "lyric": "/A"
+  },
+  {
+   "time": 23.455,
+   "duration": 0.273,
+   "pitch": 66,
+   "lyric": "tus"
+  },
+  {
+   "time": 23.727,
+   "duration": 0.273,
+   "pitch": 66,
+   "lyric": "ma-"
+  },
+  {
+   "time": 24,
+   "duration": 0.545,
+   "pitch": 64,
+   "lyric": "nos,"
+  },
+  {
+   "time": 24.545,
+   "duration": 0.545,
+   "pitch": 62,
+   "lyric": "Se-"
+  },
+  {
+   "time": 25.091,
+   "duration": 1.091,
+   "pitch": 64,
+   "lyric": "ñor,"
+  },
+  {
+   "time": 26.182,
+   "duration": 0.273,
+   "pitch": 59,
+   "lyric": "en-"
+  },
+  {
+   "time": 26.455,
+   "duration": 0.273,
+   "pitch": 59,
+   "lyric": "co-"
+  },
+  {
+   "time": 26.727,
+   "duration": 0.273,
+   "pitch": 59,
+   "lyric": "mien-"
+  },
+  {
+   "time": 27,
+   "duration": 0.273,
+   "pitch": 59,
+   "lyric": "do"
+  },
+  {
+   "time": 27.273,
+   "duration": 0.545,
+   "pitch": 57,
+   "lyric": "mi"
+  },
+  {
+   "time": 27.818,
+   "duration": 0.545,
+   "pitch": 59,
+   "lyric": "es-"
+  },
+  {
+   "time": 28.364,
+   "duration": 0.545,
+   "pitch": 62,
+   "lyric": "pí-"
+  },
+  {
+   "time": 28.909,
+   "duration": 0.273,
+   "pitch": 62,
+   "lyric": "ri-"
+  },
+  {
+   "time": 29.182,
+   "duration": 1.091,
+   "pitch": 62,
+   "lyric": "tu."
+  }
+ ]
+}

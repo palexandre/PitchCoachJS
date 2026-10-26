@@ -5,6 +5,7 @@ import { loadSong, parsePitch, midiToName } from '../src/index.js';
 import { writeMidi } from '../src/formats/midi-writer.js';
 
 const songsDir = new URL('../example/songs/', import.meta.url);
+const fixturesDir = new URL('./fixtures/', import.meta.url);
 
 test('parsePitch understands English and solfège names', () => {
   assert.equal(parsePitch('C4'), 60);
@@ -17,7 +18,7 @@ test('parsePitch understands English and solfège names', () => {
 });
 
 test('MIDI with lyric events: picks the melody track and joins syllables', async () => {
-  const song = await loadSong(readFileSync(new URL('martinillo.mid', songsDir)));
+  const song = await loadSong(readFileSync(new URL('martinillo.mid', fixturesDir)));
   assert.equal(song.title, 'Martinillo');
   assert.equal(song.meta.melody, '1:0');
   assert.equal(song.notes.length, 32);
@@ -84,7 +85,7 @@ function vlq(n) {
 }
 
 test('UltraStar txt', async () => {
-  const song = await loadSong(readFileSync(new URL('estrellita.txt', songsDir), 'utf8'));
+  const song = await loadSong(readFileSync(new URL('estrellita.txt', fixturesDir), 'utf8'));
   assert.equal(song.title, 'Estrellita');
   assert.equal(song.notes.length, 42);
   assert.equal(song.lines.length, 6);

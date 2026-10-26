@@ -1,4 +1,4 @@
-// Generates example/songs/martinillo.mid (traditional song, public domain).
+// Generates test/fixtures/martinillo.mid (traditional song, public domain).
 // Usage: node tools/make-demo-songs.js
 import { writeFileSync } from 'node:fs';
 import { writeMidi } from '../src/formats/midi-writer.js';
@@ -43,5 +43,5 @@ const bytes = writeMidi({
     { name: 'Bajo', channel: 1, notes: bass },
   ],
 });
-writeFileSync(new URL('../example/songs/martinillo.mid', import.meta.url), bytes);
-console.log('example/songs/martinillo.mid', bytes.length, 'bytes');
+writeFileSync(new URL('../test/fixtures/martinillo.mid', import.meta.url), bytes);
+console.log('test/fixtures/martinillo.mid', bytes.length, 'bytes');

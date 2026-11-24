@@ -5,7 +5,7 @@ export { PitchDetector, yin, openMicrophone } from './pitch-detector.js';
 export { checkFeedback, FeedbackGuard } from './feedback.js';
 export { Scorer, DIFFICULTIES } from './scorer.js';
 export { Renderer, DEFAULT_THEME, DEFAULT_LABELS } from './renderer.js';
-export { Synth } from './synth.js';
+export { Synth, outputDelay } from './synth.js';
 export { Piano } from './piano.js';
 export { Metronome } from './metronome.js';
 export { PianoKeyboard } from './keyboard.js';

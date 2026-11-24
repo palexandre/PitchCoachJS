@@ -10,7 +10,7 @@
 import { Emitter } from './emitter.js';
 import { PitchDetector } from './pitch-detector.js';
 import { Scorer, DIFFICULTIES } from './scorer.js';
-import { Synth } from './synth.js';
+import { Synth, outputDelay } from './synth.js';
 import { Renderer } from './renderer.js';
 
 const DEFAULTS = {
@@ -193,10 +193,10 @@ export class PitchCoach extends Emitter {
     if (this.state !== 'playing') this._drawFrame(0);
   }
 
-  /** Current song time in seconds. */
+  /** Current song time in seconds: what is being heard right now. */
   get currentTime() {
     if (this.state !== 'playing' || !this.audioContext) return this._time;
-    return this._clockOffset + (this.audioContext.currentTime - this._clockStart) * this.options.speed;
+    return this._renderTime() - outputDelay(this.audioContext) * this.options.speed;
   }
 
   destroy() {
@@ -211,6 +211,11 @@ export class PitchCoach extends Emitter {
     const o = this.options;
     this.synth.guide.gain.value = this._demo ? Math.max(o.guideVolume, 0.3) : o.guideVolume;
     this.synth.backing.gain.value = o.accompanimentVolume;
+  }
+
+  // song time of the audio being rendered; it reaches the speaker outputDelay() later
+  _renderTime() {
+    return this._clockOffset + (this.audioContext.currentTime - this._clockStart) * this.options.speed;
   }
 
   _seekClock(t) {
@@ -242,9 +247,10 @@ export class PitchCoach extends Emitter {
         this.seek(this.loopRange[0]);
         t = this.currentTime;
       }
-      this.synth.schedule(t, (st) => this._clockStart + (st - this._clockOffset) / o.speed, o);
-      const latency = this._demo ? 0.03 : o.latency;
-      const res = this.scorer.update(t - latency * o.speed, reading?.midi ?? null);
+      this.synth.schedule(this._renderTime(), (st) => this._clockStart + (st - this._clockOffset) / o.speed, o);
+      // the demo listens to the synth directly, before the speaker; the mic hears the singer, who follows the speaker
+      const sung = this._demo ? this._renderTime() - 0.03 * o.speed : t - o.latency * o.speed;
+      const res = this.scorer.update(sung, reading?.midi ?? null);
       this.pitch = { ...reading, midi: res.midi, hit: res.hit, cents: res.cents, note: res.note };
       this.emit('frame', { time: t, pitch: this.pitch });
       if (t > this.song.duration + 0.6) this._end();

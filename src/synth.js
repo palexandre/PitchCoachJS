@@ -8,6 +8,14 @@ import { legatoGroups } from './song.js';
 
 const LOOKAHEAD = 0.35; // seconds of song scheduled in advance
 
+/**
+ * Seconds between a sample being rendered (ctx.currentTime) and it reaching the speaker.
+ * Small on desktop; on Android it can exceed 0.1 s, so visuals must lag by this much.
+ */
+export function outputDelay(ctx) {
+  return (ctx?.outputLatency || 0) + (ctx?.baseLatency || 0);
+}
+
 export class Synth {
   constructor(ctx, destination = ctx.destination) {
     this.ctx = ctx;

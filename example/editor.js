@@ -2,7 +2,7 @@
 // real-time recording (piano or voice), lyrics and export.
 import {
   Piano, PianoKeyboard, NoteRecorder, PitchDetector,
-  splitLyrics, midiToName, draftToJSON, themedContext, legatoGroups,
+  splitLyrics, midiToName, draftToJSON, themedContext, legatoGroups, outputDelay,
 } from '../src/index.js';
 import { readJSON, writeJSON } from './store.js';
 
@@ -398,7 +398,7 @@ export class SongEditor {
       const now = ctx.currentTime;
 
       if (this.mode === 'playing') {
-        const beat = this.playFrom.beat + (now - this.playFrom.t0) / spb;
+        const beat = this.playFrom.beat + (now - outputDelay(ctx) - this.playFrom.t0) / spb; // lo que se oye
         this.playhead = Math.max(this.playFrom.beat, beat);
         this.keyboard.clearHighlights();
         for (const n of this.notes) if (beat >= n.beat && beat < n.beat + n.length) this.keyboard.highlight(n.midi, true);

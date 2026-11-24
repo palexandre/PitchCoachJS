@@ -334,7 +334,7 @@ export class Renderer {
         ctx.restore();
       }
 
-      if (n.lyric) {
+      if (n.lyric && n.lyric !== '~') { // '~' holds the previous syllable: no label of its own
         const active = time >= n.start && time < n.end;
         const ratio = st ? st.hit / Math.max(0.05, st.elapsed) : 0;
         let color = theme.lyric;

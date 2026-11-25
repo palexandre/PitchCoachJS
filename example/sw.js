@@ -3,7 +3,7 @@
 // no edites a mano el bloque entre los marcadores.
 
 // <precache>
-const VERSION = '504d7d4bc5';
+const VERSION = '1924109383';
 const PRECACHE = [
   './',
   './app.js',
@@ -17,8 +17,14 @@ const PRECACHE = [
   './icons/icon-maskable-512.png',
   './index.html',
   './manifest.webmanifest',
+  './songs/alma-redemptoris-mater.json',
+  './songs/cantemos-al-amor-de-los-amores.json',
+  './songs/cerca-de-ti-senor.json',
   './songs/escala.json',
-  './songs/responsorio-breve.json',
+  './songs/regina-coeli.json',
+  './songs/rorate.json',
+  './songs/salve-mater.json',
+  './songs/salve-regina.json',
   './store.js',
   './style.css',
   './theme.js',

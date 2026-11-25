@@ -6,7 +6,13 @@ import { lightColor } from './theme.js';
 const $ = (sel) => document.querySelector(sel);
 
 const BUILTIN = [
-  { id: 'songs/responsorio-breve.json', artist: 'Completas' },
+  { id: 'songs/salve-regina.json', artist: 'Gregoriano' },
+  { id: 'songs/regina-coeli.json', artist: 'Gregoriano' },
+  { id: 'songs/alma-redemptoris-mater.json', artist: 'Gregoriano' },
+  { id: 'songs/salve-mater.json', artist: 'Dom J. Pothier' },
+  { id: 'songs/rorate.json', artist: 'Gregoriano' },
+  { id: 'songs/cantemos-al-amor-de-los-amores.json', artist: 'Busca de Sagastizábal' },
+  { id: 'songs/cerca-de-ti-senor.json', artist: 'L. Mason · T. M. Westrup' },
   { id: 'songs/escala.json', artist: 'Calentamiento' },
 ];
 

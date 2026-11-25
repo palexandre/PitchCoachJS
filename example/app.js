@@ -700,6 +700,7 @@ function isPlaying() {
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('is-active', s.id === id));
   document.body.classList.toggle('playing', id === 'play' || id === 'editor');
+  setTimeout(maybeApplyUpdate, 0);
 }
 
 let gameRun = 0; // cambia en cada arranque y al salir: lo que llegue tarde de un arranque viejo se descarta
@@ -1592,10 +1593,12 @@ function applyUpdate(worker = waitingWorker) {
   worker.postMessage('skipWaiting');
 }
 
-/** Llamar al volver a la biblioteca: aplica una versión pendiente. */
+/** Al volver a la biblioteca o cerrar una ventana: aplica una versión pendiente. */
 function maybeApplyUpdate() {
   if (waitingWorker && canUpdateNow()) applyUpdate();
 }
+// el evento close no burbujea: se escucha en captura para todas las ventanas
+document.addEventListener('close', () => setTimeout(maybeApplyUpdate, 0), true);
 
 const offerUpdate = (worker) => {
   waitingWorker = worker;

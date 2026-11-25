@@ -2,7 +2,7 @@
   "id": "./",
   "name": "PitchCoach · practica a cantar",
   "short_name": "PitchCoach",
-  "description": "Karaoke que te escucha: canta, afina y suma estrellas. Crea tus canciones tocando el piano o cantando.",
+  "description": "Practica cantando y afinando para ganar la máxima puntuación.",
   "lang": "es",
   "dir": "ltr",
   "start_url": "./",

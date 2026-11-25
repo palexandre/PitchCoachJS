@@ -427,14 +427,19 @@
     <p class="eyebrow" id="vt-step"></p>
     <h2 id="vt-title">Prueba de voz</h2>
     <p class="muted" id="vt-text"></p>
-    <div class="vt-live" id="vt-live" hidden>
-      <div class="vt-note" id="vt-note" aria-live="polite">–</div>
-      <div class="vt-meter" aria-hidden="true"><i id="vt-level"></i></div>
-      <p class="vt-mark" id="vt-mark"></p>
+    <div class="vt-ruler" id="vt-ruler" hidden aria-hidden="true">
+      <div class="vt-track">
+        <div class="vt-ticks" id="vt-ticks"></div>
+        <div class="vt-band" id="vt-band" hidden></div>
+        <div class="vt-ball" id="vt-ball" hidden></div>
+      </div>
+      <div class="vt-ends"><span>Grave</span><span>Agudo</span></div>
     </div>
+    <p class="vt-mark" id="vt-mark" aria-live="polite"></p>
     <dl class="breakdown" id="vt-result" hidden></dl>
     <div class="menu">
       <button class="btn btn-primary btn-lg" id="vt-next" type="button">Empezar</button>
+      <button class="btn" id="vt-again" type="button" hidden>Empezar de nuevo</button>
       <button class="btn btn-ghost" id="vt-cancel" type="button">Cancelar</button>
     </div>
   </dialog>

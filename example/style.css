@@ -772,10 +772,16 @@ kbd, code { padding: 1px 6px; border-radius: 6px; background: rgba(var(--c-fffff
 .voice-test { text-align: center; }
 .voice-test h2 { margin-bottom: 8px; }
 .voice-test #vt-text { margin: 0 0 18px; }
-.vt-live { margin: 6px 0 18px; }
-.vt-note { font-size: 56px; font-weight: 900; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.vt-meter { height: 8px; margin: 12px auto 0; max-width: 220px; border-radius: 99px; background: rgba(var(--c-ffffff), 0.1); overflow: hidden; }
-.vt-meter i { display: block; height: 100%; width: 0; border-radius: inherit; background: rgb(var(--c-1fd1b5)); transition: width 0.08s; }
-.vt-mark { min-height: 20px; margin: 12px 0 0; font-weight: 800; color: var(--muted); }
+.vt-ruler { margin: 4px 0 6px; }
+.vt-track { position: relative; height: 56px; margin: 0 10px; }
+.vt-track::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 6px; margin-top: -3px; border-radius: 99px; background: rgba(var(--c-ffffff), 0.12); }
+.vt-ticks span { position: absolute; top: 50%; }
+.vt-ticks i { position: absolute; left: -1px; top: -11px; width: 2px; height: 22px; border-radius: 2px; background: rgba(var(--c-ffffff), 0.22); }
+.vt-ticks b { position: absolute; top: 14px; transform: translateX(-50%); font-size: 11px; font-weight: 800; color: var(--faint); white-space: nowrap; }
+.vt-band { position: absolute; top: 50%; height: 14px; margin-top: -7px; min-width: 6px; border-radius: 99px; background: rgb(var(--c-1fd1b5)); opacity: 0.85; transition: left 0.15s, width 0.15s; }
+.vt-ball { position: absolute; top: 50%; width: 24px; height: 24px; margin: -12px 0 0 -12px; border-radius: 50%; background: rgb(var(--c-ffcf4a)); box-shadow: 0 0 0 4px rgba(var(--c-ffcf4a), 0.25); transition: left 0.08s linear, opacity 0.3s; }
+.vt-ball.idle { opacity: 0.35; }
+.vt-ends { display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; color: var(--muted); }
+.vt-mark { min-height: 22px; margin: 10px 0 0; font-size: 18px; font-weight: 900; font-variant-numeric: tabular-nums; }
 .voice-test .breakdown { grid-template-columns: repeat(2, 1fr); margin-top: 4px; }
 .key-hint { width: 100%; margin: 4px 0 14px; white-space: normal; }

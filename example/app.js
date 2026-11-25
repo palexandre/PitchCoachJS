@@ -1253,84 +1253,76 @@ function askConfirm({ title, text = '', ok = 'Aceptar', cancel = 'Cancelar', dan
 
 // ---- Prueba de voz ----------------------------------------------------------------
 
-const VT_STEPS = {
-  intro: { step: '', title: 'Prueba de voz', text: 'Vas a cantar tres cosas cortas para conocer tu voz. Busca un sitio tranquilo; no hacen falta auriculares.', btn: 'Empezar' },
-  speak: { step: 'Paso 1 de 3', title: 'Una nota cómoda', text: 'Di «aaaa» sostenido, en el tono en que hablas normalmente.', btn: 'Escuchando…' },
-  low: { step: 'Paso 2 de 3', title: 'Lo más grave', text: 'Canta «aaaa» y baja poco a poco hasta la nota más grave que te salga sin forzar. Pulsa Listo al llegar.', btn: 'Listo' },
-  high: { step: 'Paso 3 de 3', title: 'Lo más agudo', text: 'Ahora sube poco a poco hasta la nota más aguda que te salga sin forzar ni gritar. Pulsa Listo al llegar.', btn: 'Listo' },
-};
+// Regla de la prueba: de Do2 a Do6, de izquierda (grave) a derecha (agudo)
+const VT_MIN = 36;
+const VT_MAX = 84;
+const vtPos = (m) => `${(Math.max(0, Math.min(1, (m - VT_MIN) / (VT_MAX - VT_MIN))) * 100).toFixed(2)}%`;
+$('#vt-ticks').innerHTML = [48, 60, 72].map((m) => `<span style="left:${vtPos(m)}"><i></i><b data-midi="${m}"></b></span>`).join('');
 
 /** Abre la prueba de voz; devuelve true si se guarda un rango nuevo. */
 function runVoiceTest() {
   const d = $('#voice-test');
   let phase = 'intro';
+  let stable = []; // notas sostenidas (MIDI) de toda la prueba
   let frames = [];
-  const found = {};
+  let range = null;
   let detector = null;
   let raf = 0;
+  const MIN_SPAN = 7; // menos de una quinta: no se ha bajado ni subido de verdad
+
+  d.querySelectorAll('.vt-ticks b').forEach((b) => (b.textContent = noteName(Number(b.dataset.midi))));
+
+  const reached = () => {
+    if (stable.length < 10) return null;
+    return { low: Math.round(percentile(stable, 0.02)), high: Math.round(percentile(stable, 0.98)) };
+  };
 
   const show = (p) => {
     phase = p;
-    frames = [];
-    const st = VT_STEPS[p];
-    $('#vt-live').hidden = p === 'intro' || p === 'result';
+    $('#vt-ruler').hidden = p !== 'listen';
     $('#vt-result').hidden = p !== 'result';
-    if (st) {
-      $('#vt-step').textContent = st.step;
-      $('#vt-title').textContent = st.title;
-      $('#vt-text').textContent = st.text;
-      $('#vt-next').textContent = st.btn;
-    }
-    $('#vt-next').disabled = p === 'speak' || p === 'low' || p === 'high';
-    $('#vt-note').textContent = '–';
+    $('#vt-again').hidden = p === 'intro';
     $('#vt-mark').textContent = '';
-  };
-
-  const finish = () => {
-    stop();
-    const low = Math.round(found.low);
-    const high = Math.round(found.high);
-    if (high - low < 7) {
+    if (p === 'intro') {
       $('#vt-step').textContent = '';
-      $('#vt-title').textContent = 'No se ha podido medir bien';
-      $('#vt-text').textContent = 'Hace falta que bajes y subas un poco más. Prueba otra vez con calma.';
-      $('#vt-result').hidden = true;
-      $('#vt-live').hidden = true;
-      $('#vt-next').textContent = 'Repetir';
+      $('#vt-title').textContent = 'Prueba de voz';
+      $('#vt-text').textContent = 'Canta la nota más grave que puedas y luego la más aguda, sin forzar. Cuando termines, pulsa Aceptar.';
+      $('#vt-next').textContent = 'Empezar';
       $('#vt-next').disabled = false;
-      phase = 'retry';
-      return;
+    } else if (p === 'listen') {
+      stable = [];
+      frames = [];
+      $('#vt-step').textContent = 'Te escucho';
+      $('#vt-title').textContent = 'De lo más grave a lo más agudo';
+      $('#vt-text').textContent = 'Canta «aaa» y baja todo lo que puedas; luego sube todo lo que puedas. La franja verde es tu rango.';
+      $('#vt-band').hidden = true;
+      $('#vt-ball').hidden = true;
+      $('#vt-next').textContent = 'Aceptar';
+      $('#vt-next').disabled = true;
     }
-    const range = { low, high, speak: Math.round(found.speak ?? (low + high) / 2) };
-    const type = classifyVoice(range);
-    const zone = comfortZone(range);
-    found.range = range;
-    show('result');
-    $('#vt-step').textContent = 'Resultado';
-    $('#vt-title').textContent = type.name;
-    $('#vt-text').textContent = 'Tipo de voz orientativo según tu rango. Cada canción se pondrá sola en un tono cómodo para ti.';
-    $('#vt-result').innerHTML = `
-      <div><dt>Tu voz</dt><dd>${noteName(low)}–${noteName(high)}</dd></div>
-      <div><dt>Zona cómoda</dt><dd>${noteName(Math.round(zone.low))}–${noteName(Math.round(zone.high))}</dd></div>`;
-    $('#vt-next').textContent = 'Guardar';
-    $('#vt-next').disabled = false;
   };
 
   const tick = () => {
     const p = detector?.read();
     const m = p?.midi ?? null;
     frames.push(m);
-    $('#vt-level').style.width = `${Math.min(100, (detector?.volume ?? 0) * 900)}%`;
-    if (m != null) $('#vt-note').textContent = noteName(Math.round(m));
-    const stable = stablePitches(frames);
-    if (phase === 'speak' && stable.length >= 60) {
-      found.speak = percentile(stable, 0.5);
-      show('low');
-    } else if ((phase === 'low' || phase === 'high') && stable.length >= 15) {
-      const v = percentile(stable, phase === 'low' ? 0.03 : 0.97);
-      found[phase] = v;
-      $('#vt-mark').textContent = `${phase === 'low' ? 'Lo más grave' : 'Lo más agudo'}: ${noteName(Math.round(v))}`;
-      $('#vt-next').disabled = false;
+    if (frames.length > 12) frames.shift();
+    const ball = $('#vt-ball');
+    if (m != null && m >= VT_MIN - 6 && m <= VT_MAX + 6) {
+      ball.hidden = false;
+      ball.style.left = vtPos(m);
+      ball.classList.remove('idle');
+    } else ball.classList.add('idle');
+    const s = stablePitches(frames);
+    if (s.length && frames.length >= 9) stable.push(s.at(-1));
+    const r = reached();
+    if (r) {
+      const band = $('#vt-band');
+      band.hidden = false;
+      band.style.left = vtPos(r.low);
+      band.style.width = `calc(${vtPos(r.high)} - ${vtPos(r.low)})`;
+      $('#vt-mark').textContent = `${noteName(r.low)} – ${noteName(r.high)}`;
+      $('#vt-next').disabled = r.high - r.low < MIN_SPAN;
     }
     raf = requestAnimationFrame(tick);
   };
@@ -1341,11 +1333,45 @@ function runVoiceTest() {
     detector = null;
   };
 
+  const listen = async () => {
+    try {
+      releaseMic();
+      detector ??= new PitchDetector({ audioContext: audio(), minFreq: 55, maxFreq: 1400 });
+      await audio().resume();
+      if (!detector.running) await detector.start({ loop: false });
+    } catch {
+      toast('No se pudo usar el micrófono', true);
+      return false;
+    }
+    show('listen');
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(tick);
+    return true;
+  };
+
+  const result = () => {
+    const r = reached();
+    stop();
+    range = { low: r.low, high: r.high };
+    const type = classifyVoice(range);
+    const zone = comfortZone(range);
+    show('result');
+    $('#vt-step').textContent = 'Resultado';
+    $('#vt-title').textContent = type.name;
+    $('#vt-text').textContent = 'Tipo de voz orientativo según tu rango. Cada canción se pondrá sola en un tono cómodo para ti.';
+    $('#vt-result').innerHTML = `
+      <div><dt>Tu voz</dt><dd>${noteName(range.low)}–${noteName(range.high)}</dd></div>
+      <div><dt>Zona cómoda</dt><dd>${noteName(Math.round(zone.low))}–${noteName(Math.round(zone.high))}</dd></div>`;
+    $('#vt-next').textContent = 'Guardar';
+    $('#vt-next').disabled = false;
+  };
+
   return new Promise((resolve) => {
     const done = (saved) => {
       stop();
       d.removeEventListener('cancel', onCancel);
       $('#vt-next').onclick = null;
+      $('#vt-again').onclick = null;
       $('#vt-cancel').onclick = null;
       closeDialog(d);
       resolve(saved);
@@ -1355,24 +1381,14 @@ function runVoiceTest() {
       done(false);
     };
     $('#vt-cancel').onclick = () => done(false);
+    $('#vt-again').onclick = () => listen();
     $('#vt-next').onclick = async () => {
-      if (phase === 'intro' || phase === 'retry') {
-        try {
-          releaseMic();
-          detector = new PitchDetector({ audioContext: audio(), minFreq: 55, maxFreq: 1400 });
-          await audio().resume();
-          await detector.start({ loop: false });
-        } catch {
-          toast('No se pudo usar el micrófono', true);
-          return done(false);
-        }
-        show('speak');
-        raf = requestAnimationFrame(tick);
-      } else if (phase === 'low') show('high');
-      else if (phase === 'high') finish();
+      if (phase === 'intro') {
+        if (!(await listen())) done(false);
+      } else if (phase === 'listen') result();
       else if (phase === 'result') {
-        updateSetting({ voiceRange: found.range });
-        toast(`Voz guardada: ${classifyVoice(found.range).name}`);
+        updateSetting({ voiceRange: range });
+        toast(`Voz guardada: ${classifyVoice(range).name}`);
         done(true);
       }
     };

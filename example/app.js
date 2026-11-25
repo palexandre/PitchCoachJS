@@ -24,6 +24,7 @@ const DEFAULT_SETTINGS = {
   accompanimentVolume: 0.18,
   latency: 0.06,
   notation: 'solfege',
+  voice: 'grave',
   theme: 'claro',
 };
 const DIFFICULTY_TEXT = {
@@ -362,7 +363,7 @@ function openSongSheet(entry) {
   $('#sheet-stats').innerHTML = `
     <div class="stat"><b>${formatDuration(s)}</b><span>Duración</span></div>
     <div class="stat"><b>${s.notes.length}</b><span>Notas</span></div>
-    <div class="stat"><b>${noteName(s.lowest + transposeOf(entry))}–${noteName(s.highest + transposeOf(entry))}</b><span>Tesitura</span></div>`;
+    <div class="stat"><b>${noteName(s.lowest + keyOf(entry))}–${noteName(s.highest + keyOf(entry))}</b><span>Tesitura</span></div>`;
   const b = best[entry.id];
   $('#sheet-best').innerHTML = b
     ? `<span>Tu récord</span><span class="mini-stars">${starsText(b.stars)}</span><span>${b.grade} · ${b.score.toLocaleString('es')}</span>
@@ -387,6 +388,24 @@ function renderChips() {
 
 function transposeOf(entry) {
   return entry ? perSong[entry.id]?.transpose ?? 0 : 0;
+}
+
+// Tono de partida según la voz: cada canción se lleva a la octava cómoda y, si aún sube demasiado,
+// se baja algún semitono. «Tono» en Ajustes se suma encima, así que su 0 es este tono cómodo.
+const VOICES = { grave: { center: 55, top: 62 }, aguda: { center: 67, top: 74 } };
+function voiceShift(entry) {
+  const v = VOICES[settings.voice];
+  const s = entry?.song;
+  if (!v || !s?.notes.length) return 0;
+  let shift = 12 * Math.round((v.center - (s.lowest + s.highest) / 2) / 12);
+  const over = s.highest + shift - v.top;
+  if (over > 0) shift -= Math.min(over, 4);
+  return shift;
+}
+
+/** Semitonos que se aplican de verdad: voz + ajuste de Tono de la canción. */
+function keyOf(entry) {
+  return voiceShift(entry) + transposeOf(entry);
 }
 
 $('#sheet-settings').addEventListener('click', () => openSettings());
@@ -584,6 +603,10 @@ function updateSetting(patch) {
   Object.assign(settings, patch);
   writeJSON('settings', settings);
   game.set(patch);
+  if ('voice' in patch) {
+    game.set({ transpose: keyOf(current) });
+    if (current && $('#song-sheet').open) openSongSheetStats();
+  }
   if ('notation' in patch) {
     editor.keyboard.setNotation(settings.notation);
     editor.draw();
@@ -610,14 +633,14 @@ function stepTranspose(d) {
   const v = Math.max(-12, Math.min(12, transposeOf(current) + d));
   perSong[current.id] = { ...perSong[current.id], transpose: v };
   writeJSON('per-song', perSong);
-  game.set({ transpose: v });
+  game.set({ transpose: keyOf(current) });
   syncSettingsUI();
   renderChips();
   if ($('#song-sheet').open) openSongSheetStats();
 }
 function openSongSheetStats() {
   const s = current.song;
-  const t = transposeOf(current);
+  const t = keyOf(current);
   $('#sheet-stats .stat:last-child b').textContent = `${noteName(s.lowest + t)}–${noteName(s.highest + t)}`;
 }
 $('#tr-down').addEventListener('click', () => stepTranspose(-1));
@@ -681,7 +704,7 @@ async function startGame(m) {
     showScreen('play');
     if (!history.state?.play) history.pushState({ play: true }, '');
     layoutHud();
-    game.set({ ...settings, transpose: transposeOf(current) });
+    game.set({ ...settings, transpose: keyOf(current) });
     game.load(current.song);
     $('#hud-title').textContent = current.song.title;
     $('#mode-badge').hidden = m !== 'demo';
@@ -841,7 +864,7 @@ function showAudioMode(kind) {
 async function prepareAudio(song) {
   const ctx = audio();
   showAudioMode(null);
-  const midis = [...new Set(song.notes.map((n) => n.midi + transposeOf(current)))].slice(0, 4);
+  const midis = [...new Set(song.notes.map((n) => n.midi + keyOf(current)))].slice(0, 4);
   const volume = Math.max(0.15, settings.guideVolume) * 0.6;
   const liveText = $('#live-text');
   const attempt = async (ec) => {

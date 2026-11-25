@@ -314,6 +314,12 @@ function noteName(midi) {
 
 // ---- importing ----------------------------------------------------------------
 
+/** Mismo título sin contar mayúsculas, tildes ni signos: «Regina caeli» = «Regina Caeli». */
+function sameTitle(a, b) {
+  const norm = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  return norm(a) === norm(b);
+}
+
 async function importFile(file) {
   if (!file) return;
   const bytes = await file.arrayBuffer();
@@ -321,8 +327,17 @@ async function importFile(file) {
   await parseEntry(entry);
   if (!entry.song) return toast(`No se pudo leer «${file.name}»: ${entry.error}`, true);
   if (!entry.song.notes.length) return toast('El archivo no tiene notas para cantar', true);
+  const dup = library.find((e) => e.song && sameTitle(e.song.title, entry.song.title));
+  if (dup && !dup.imported) {
+    const ok = await askConfirm({ title: 'Esta canción ya viene en la app', text: `«${dup.song.title}» ya está en tu biblioteca. ¿Quieres añadir tu versión de todos modos?`, ok: 'Añadir', cancel: 'Cancelar' });
+    if (!ok) return;
+  } else if (dup) {
+    const ok = await askConfirm({ title: 'Ya tienes esta canción', text: `«${dup.song.title}» ya está en tu biblioteca. ¿Quieres reemplazarla por la que estás importando? Se conservan tu récord y su tono.`, ok: 'Reemplazar', cancel: 'Cancelar' });
+    if (!ok) return;
+    entry.id = dup.id; // misma id: récord y ajustes de la canción siguen valiendo
+  }
   await saveImported({ id: entry.id, name: file.name, bytes, addedAt: entry.addedAt });
-  library.unshift(entry);
+  library = [entry, ...library.filter((e) => e.id !== entry.id)];
   renderLibrary();
   if (entry.song.meta.format === 'midi' && !entry.song.meta.hasLyrics) toast('Este MIDI no trae letra: podrás cantarlo con vocales');
   openSongSheet(entry);

@@ -1,11 +1,12 @@
 /**
- * Exportación a audio: toca la canción con el piano sin sonar (OfflineAudioContext)
+ * Exportación a audio: toca la canción con el órgano sin sonar (OfflineAudioContext)
  * y la guarda como WAV, que se abre en cualquier reproductor.
  *
  *   const wav = await songToWav(song);            // Uint8Array
  *   new Blob([wav], { type: 'audio/wav' });
  */
-import { Piano } from '../piano.js';
+import { Organ } from '../organ.js';
+import { legatoGroups } from '../song.js';
 
 /**
  * @param {object} song canción finalizada (loadSong)
@@ -13,7 +14,7 @@ import { Piano } from '../piano.js';
  * @param {number} [opts.sampleRate=44100]
  * @param {boolean} [opts.accompaniment=true] incluir el resto de pistas del MIDI
  * @param {number} [opts.transpose=0] semitonos
- * @param {number} [opts.tail=1.5] segundos de cola para que la última nota se apague
+ * @param {number} [opts.tail=1.5] segundos de silencio al final
  */
 export async function songToWav(song, { sampleRate = 44100, accompaniment = true, transpose = 0, tail = 1.5 } = {}) {
   const Offline = globalThis.OfflineAudioContext ?? globalThis.webkitOfflineAudioContext;
@@ -22,11 +23,11 @@ export async function songToWav(song, { sampleRate = 44100, accompaniment = true
   const end = Math.max(song.duration, ...backing.map((n) => n.end)) + tail;
   const ctx = new Offline(2, Math.ceil(end * sampleRate), sampleRate);
 
-  const melody = new Piano(ctx, ctx.destination, { volume: 0.9 });
-  for (const n of song.notes) melody.play(n.midi + transpose, { when: n.start, duration: n.end - n.start, velocity: 0.85 });
+  const melody = new Organ(ctx, ctx.destination, { volume: 0.9 });
+  for (const n of legatoGroups(song.notes)) melody.play(n.midi + transpose, { when: n.start, duration: n.end - n.start, velocity: 0.85 });
   if (backing.length) {
-    const piano = new Piano(ctx, ctx.destination, { volume: 0.4 });
-    for (const n of backing) piano.play(n.midi + transpose, { when: n.start, duration: n.end - n.start, velocity: n.velocity ?? 0.6 });
+    const organ = new Organ(ctx, ctx.destination, { volume: 0.4 });
+    for (const n of backing) organ.play(n.midi + transpose, { when: n.start, duration: n.end - n.start, velocity: n.velocity ?? 0.6 });
   }
 
   const buffer = await ctx.startRendering();

@@ -7,6 +7,7 @@ export { Scorer, DIFFICULTIES } from './scorer.js';
 export { Renderer, DEFAULT_THEME, DEFAULT_LABELS } from './renderer.js';
 export { Synth, outputDelay } from './synth.js';
 export { Piano } from './piano.js';
+export { Organ } from './organ.js';
 export { Metronome } from './metronome.js';
 export { PianoKeyboard } from './keyboard.js';
 export { NoteRecorder, segmentsToNotes, quantize } from './recorder.js';

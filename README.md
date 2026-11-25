@@ -32,7 +32,7 @@ La página de ejemplo es una app completa y responsive (móvil primero):
   - Grabar **cantando**, o tocando el **piano de la pantalla** / el teclado del ordenador (`A W S E D F T G Y H U J K`, `Z`/`X` cambian de octava).
   - Escribir nota a nota: elige la duración (semicorchea… redonda), toca una tecla y la nota se añade en el cursor. Toca una nota para seleccionarla, arrástrala para moverla o estira su borde para alargarla.
   - **Letra** como texto normal (`can-ción`, salto de línea = frase nueva) que se reparte sola entre las notas, con contador de sílabas/notas.
-  - Escuchar con piano y metrónomo, tempo y compás, deshacer/rehacer, autoguardado del borrador, **Probar cantando** y exportar a **JSON** o **MIDI con letra**.
+  - Escuchar con órgano y metrónomo, tempo y compás, deshacer/rehacer, autoguardado del borrador, **Probar cantando** y exportar a **JSON** o **MIDI con letra**.
 - Arrastra un `.mid`, `.kar`, `.txt` (UltraStar) o `.json` sobre la página para importarlo.
 
 ## Instalar como app (PWA)
@@ -180,7 +180,8 @@ await det.start();                              // micrófono; det.stop() para s
 | `Synth` | reproduce la guía y el acompañamiento con Web Audio |
 | `parsePitch`, `midiToName`, `midiToFreq`, `freqToMidi` | utilidades de notas (`'Do#4'`, `'Mib3'`, `'C4'`, `'Bb2'`…) |
 | `parseMidi`, `midiToSong`, `ultrastarToSong`, `jsonToSong`, `finalizeSong` | lectores de formatos |
-| `Piano` | sonido de piano sintetizado (sin muestras): `play(midi, { duration })`, `noteOn/noteOff` |
+| `Organ` | sonido de órgano sintetizado que mantiene cada nota hasta el final: `play(midi, { duration })`, `noteOn/noteOff` |
+| `Piano` | sonido de piano sintetizado (sin muestras), con la misma interfaz |
 | `PianoKeyboard` | teclado de piano en pantalla (táctil, glissando, teclado del ordenador) con eventos `noteon`/`noteoff` |
 | `Metronome` | metrónomo preciso con acentos por compás |
 | `NoteRecorder` | convierte en notas cuantizadas lo que llega de teclas (`noteOn/noteOff`), voz (`pitch`) o un instrumento real por micrófono (`instrument`) |

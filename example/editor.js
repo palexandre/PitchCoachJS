@@ -1,7 +1,7 @@
 // Song editor for the example app: piano roll, on-screen piano, step entry,
 // real-time recording (piano or voice), lyrics and export.
 import {
-  Piano, PianoKeyboard, NoteRecorder, PitchDetector,
+  Organ, PianoKeyboard, NoteRecorder, PitchDetector,
   splitLyrics, midiToName, draftToJSON, themedContext, legatoGroups, outputDelay,
 } from '../src/index.js';
 import { readJSON, writeJSON } from './store.js';
@@ -269,18 +269,18 @@ export class SongEditor {
   _audio() {
     const ctx = this.o.audio();
     if (ctx.state === 'suspended') ctx.resume();
-    this.piano ??= new Piano(ctx, ctx.destination, { volume: 0.7 });
+    this.organ ??= new Organ(ctx, ctx.destination, { volume: 0.7 });
     return ctx;
   }
 
   _audition(midi) {
     this._audio();
-    this.piano.play(midi, { duration: 0.35 });
+    this.organ.play(midi, { duration: 0.35 });
   }
 
   _keyDown(midi) {
     const ctx = this._audio();
-    this.piano.noteOn(midi, { velocity: 0.8 });
+    this.organ.noteOn(midi, { velocity: 0.8 });
     if (this.mode === 'recording' || this.mode === 'countin') {
       this.lastKey = midi;
       if (this.recSource === 'keys' && ctx.currentTime >= this.recStart - (30 / this.draft.bpm)) {
@@ -294,8 +294,8 @@ export class SongEditor {
   }
 
   _keyUp(midi) {
-    if (!this.piano) return;
-    this.piano.noteOff(midi);
+    if (!this.organ) return;
+    this.organ.noteOff(midi);
     if (this.mode === 'recording' && this.recSource === 'keys') this.recorder.noteOff(midi, this.o.audio().currentTime);
   }
 
@@ -312,7 +312,7 @@ export class SongEditor {
     const t0 = ctx.currentTime + 0.08;
     const groups = legatoGroups(this.notes.filter((n) => n.beat >= from - 1e-6).map((n) => ({ start: n.beat, end: n.beat + n.length, midi: n.midi })), 0.01);
     for (const g of groups) {
-      this.piano.play(g.midi, { when: t0 + (g.start - from) * spb, duration: (g.end - g.start) * spb * 0.96 });
+      this.organ.play(g.midi, { when: t0 + (g.start - from) * spb, duration: (g.end - g.start) * spb * 0.96 });
     }
     this.mode = 'playing';
     this.playFrom = { t0, beat: from };
@@ -323,7 +323,7 @@ export class SongEditor {
   stop() {
     if (this.mode === 'recording' || this.mode === 'countin') return this.stopRecording();
     if (this.mode !== 'playing') return;
-    this.piano?.stopAll();
+    this.organ?.stopAll();
     this.keyboard.clearHighlights();
     this.mode = 'idle';
     this._syncUI();

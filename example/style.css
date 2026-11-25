@@ -197,6 +197,11 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
 .cover::before { left: 14%; width: 36%; top: 58%; }
 .cover::after { left: 46%; width: 40%; top: 30%; background: var(--c2, rgb(var(--c-1fd1b5))); }
 .cover-lg { width: 72px; height: 72px; border-radius: 18px; }
+/* color según el origen: incluida en la app, importada o creada por ti */
+.kind-builtin { --c1: hsl(262 60% 52%); --c2: hsl(168 72% 56%); }
+.kind-imported { --c1: hsl(204 78% 44%); --c2: hsl(46 96% 62%); }
+.kind-own { --c1: hsl(24 88% 52%); --c2: hsl(330 90% 76%); }
+.kind-dot { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 3px; background: var(--c1); vertical-align: -1px; }
 
 .song-info { min-width: 0; flex: 1; }
 .song-title, .song-meta { display: block; }

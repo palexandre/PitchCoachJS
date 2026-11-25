@@ -184,7 +184,7 @@ function renderLibrary() {
       ? `<span class="mini-grade">${b.grade}</span><span class="mini-stars">${starsText(b.stars)}</span>`
       : entry.own ? '<span class="tag-new">Tuya</span>' : entry.imported && Date.now() - (entry.addedAt ?? 0) < 864e5 ? '<span class="tag-new">Nueva</span>' : '';
     return `<button class="song-card" role="listitem" data-id="${escapeHTML(entry.id)}" style="animation-delay:${Math.min(i, 10) * 25}ms">
-      ${coverHTML(s.title)}
+      ${coverHTML(entry)}
       <span class="song-info">
         <span class="song-title">${highlight(s.title, terms)}</span>
         <span class="song-meta">${highlight(meta, terms)}</span>
@@ -223,7 +223,7 @@ function renderHome() {
   const last = library.filter((e) => e.song && lastPlayed(e)).sort((a, b) => lastPlayed(b) - lastPlayed(a))[0];
   $('#continue-btn').hidden = !last;
   if (last) {
-    $('#continue-cover').innerHTML = coverHTML(last.song.title);
+    $('#continue-cover').innerHTML = coverHTML(last);
     $('#continue-title').textContent = last.song.title;
     const b = best[last.id];
     $('#continue-meta').textContent = `Practicada ${relativeDate(lastPlayed(last))}${b ? ` · récord ${b.grade}` : ''}`;
@@ -291,11 +291,13 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-function coverHTML(title) {
-  let h = 0;
-  for (const ch of title) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  const hue = h % 360;
-  return `<span class="cover" aria-hidden="true" style="--c1: hsl(${hue} 65% 42%); --c2: hsl(${(hue + 150) % 360} 80% 62%)"></span>`;
+// El color de la portada dice de dónde viene la canción: incluida, importada o creada por ti.
+function kindOf(entry) {
+  return entry.own ? 'own' : entry.imported ? 'imported' : 'builtin';
+}
+
+function coverHTML(entry) {
+  return `<span class="cover kind-${kindOf(entry)}" aria-hidden="true"></span>`;
 }
 
 function starsText(stars) {
@@ -372,7 +374,7 @@ document.addEventListener('drop', (e) => {
 function openSongSheet(entry) {
   current = entry;
   const s = entry.song;
-  $('#sheet-cover').outerHTML = coverHTML(s.title).replace('class="cover"', 'class="cover cover-lg" id="sheet-cover"');
+  $('#sheet-cover').outerHTML = coverHTML(entry).replace('class="cover ', 'id="sheet-cover" class="cover cover-lg ');
   $('#sheet-title').textContent = s.title;
   $('#sheet-artist').textContent = entry.artist || s.artist || FORMAT_TEXT[s.meta.format];
   $('#sheet-stats').innerHTML = `

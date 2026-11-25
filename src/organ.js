@@ -9,9 +9,6 @@ import { midiToFreq } from './notes.js';
 const STOPS = [[1, 1], [2, 0.45], [3, 0.16], [4, 0.2], [6, 0.06], [8, 0.07]];
 const ATTACK = 0.035;
 const RELEASE = 0.09;
-// Trémolo suave, como el de un órgano real. Además evita que el móvil, con el micrófono
-// abierto, tome una nota fija por ruido de fondo y la vaya apagando.
-const TREMOLO = { rate: 5.2, depth: 0.12, vibrato: 7 }; // Hz, fracción del volumen, cents
 
 export class Organ {
   /**
@@ -84,20 +81,7 @@ export class Organ {
       o.start(when);
       return o;
     });
-    const trem = ctx.createGain();
-    trem.gain.value = 1 - TREMOLO.depth;
-    const lfo = ctx.createOscillator();
-    lfo.frequency.value = TREMOLO.rate;
-    const lfoAmp = ctx.createGain();
-    lfoAmp.gain.value = TREMOLO.depth;
-    const lfoPitch = ctx.createGain();
-    lfoPitch.gain.value = TREMOLO.vibrato;
-    lfo.connect(lfoAmp).connect(trem.gain);
-    lfo.connect(lfoPitch);
-    oscs.forEach((o) => lfoPitch.connect(o.detune));
-    lfo.start(when + 0.25); // la nota empieza firme y el trémolo entra después
-    oscs.push(lfo);
-    filter.connect(trem).connect(amp).connect(this.output);
+    filter.connect(amp).connect(this.output);
     const voice = { oscs, amp, level, start: when, end: Infinity };
     oscs[0].onended = () => {
       this.all.delete(voice);

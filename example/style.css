@@ -785,3 +785,7 @@ kbd, code { padding: 1px 6px; border-radius: 6px; background: rgba(var(--c-fffff
 .vt-mark { min-height: 22px; margin: 10px 0 0; font-size: 18px; font-weight: 900; font-variant-numeric: tabular-nums; }
 .voice-test .breakdown { grid-template-columns: repeat(2, 1fr); margin-top: 4px; }
 .key-hint { width: 100%; margin: 4px 0 14px; white-space: normal; }
+
+.btn-share { width: 100%; margin: 0 0 12px; gap: 8px; }
+.btn-share svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.voice-test .btn-share { margin: 0; }

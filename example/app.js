@@ -1282,6 +1282,7 @@ function runVoiceTest() {
     $('#vt-ruler').hidden = p !== 'listen';
     $('#vt-result').hidden = p !== 'result';
     $('#vt-again').hidden = p === 'intro';
+    $('#vt-share').hidden = true;
     $('#vt-mark').textContent = '';
     if (p === 'intro') {
       $('#vt-step').textContent = '';
@@ -1364,6 +1365,8 @@ function runVoiceTest() {
       <div><dt>Zona cómoda</dt><dd>${noteName(Math.round(zone.low))}–${noteName(Math.round(zone.high))}</dd></div>`;
     $('#vt-next').textContent = 'Guardar';
     $('#vt-next').disabled = false;
+    $('#vt-share').hidden = false;
+    $('#vt-share').onclick = () => shareText(`🎤 He hecho la prueba de voz de PitchCoach: soy ${type.name.toLowerCase()} (${noteName(range.low)}–${noteName(range.high)}). ¿Y tú qué voz tienes?`);
   };
 
   return new Promise((resolve) => {
@@ -1396,6 +1399,20 @@ function runVoiceTest() {
     show('intro');
     openDialog(d);
   });
+}
+
+/** Comparte un texto con el enlace a la app: menú del sistema (WhatsApp, etc.) o, si no hay, WhatsApp directo. */
+async function shareText(text) {
+  const url = new URL('./', location.href).href;
+  if (navigator.share) {
+    try {
+      await navigator.share({ text, url });
+      return;
+    } catch (err) {
+      if (err.name === 'AbortError') return; // cerró el menú sin compartir
+    }
+  }
+  window.open(`https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`, '_blank', 'noopener');
 }
 
 function voiceSummary() {
@@ -1487,6 +1504,11 @@ function showResults(r) {
     <div><dt>Perfectas</dt><dd>${r.counts.perfect}</dd></div>
     <div><dt>Combo máx.</dt><dd>${r.maxCombo}</dd></div>`;
   showKeyHint();
+  $('#share-result').hidden = mode !== 'mic';
+  $('#share-result').onclick = () => {
+    const stars = '★'.repeat(Math.round(r.stars)) + '☆'.repeat(5 - Math.round(r.stars));
+    shareText(`🎵 He cantado «${current.song.title}» en PitchCoach: ${stars} · nota ${r.grade} · ${r.score.toLocaleString('es')} puntos · ${Math.round(r.percent * 100)}% afinado. ¿Me superas?`);
+  };
   openDialog($('#results'));
   countUp($('#result-score'), r.score, 1100);
 }

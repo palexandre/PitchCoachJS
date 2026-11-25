@@ -22,6 +22,7 @@ La página de ejemplo es una app completa y responsive (móvil primero):
 - **Inicio**: un botón para **practicar una canción**, acceso rápido a la última que practicaste, **crear** e **importar**.
 - **Selector de canciones**: buscador por título, artista o letra (sin importar tildes ni mayúsculas), filtros (Todas, Mías, Importadas, Incluidas, Con récord, Sin practicar; el color de cada portada indica lo mismo: incluida, importada o tuya) y orden por título, artista, duración, fecha añadida, última vez practicada o récord. Pensado para cientos de canciones.
 - **Ficha de canción** (hoja inferior en móvil): duración, notas, tesitura, récord y un resumen de ajustes. **Cantar** pide el micrófono; **Escuchar demo** se canta sola enviando la guía al detector.
+- **Prueba de voz** (30 s, en Ajustes o al cantar por primera vez): una nota cómoda, lo más grave y lo más agudo. Dice tu tipo de voz orientativo y tu zona cómoda, y cada canción se pone sola en tu tono. Si al terminar fallas sobre todo las notas agudas o las graves, propone mover esa canción un semitono.
 - **Comprobación de audio** al empezar a cantar: si el micrófono capta el altavoz, propone auriculares, cancelación de eco (solo si funciona en ese dispositivo) o cantar sin guía. Durante la partida, si la app se oye a sí misma, se detiene y vuelve a preguntar.
 - **Partida a pantalla completa**: solo el escenario, la pausa, la nota que estás cantando y la puntuación. Respeta el notch, mantiene la pantalla encendida y se pausa al cambiar de app.
 - **Pausa**: continuar, repetir la frase actual en bucle, empezar de nuevo, ajustes o salir. Espacio/Esc también pausan; el botón atrás del móvil sale.
@@ -180,6 +181,7 @@ await det.start();                              // micrófono; det.stop() para s
 | `Synth` | reproduce la guía y el acompañamiento con Web Audio |
 | `parsePitch`, `midiToName`, `midiToFreq`, `freqToMidi` | utilidades de notas (`'Do#4'`, `'Mib3'`, `'C4'`, `'Bb2'`…) |
 | `parseMidi`, `midiToSong`, `ultrastarToSong`, `jsonToSong`, `finalizeSong` | lectores de formatos |
+| `classifyVoice`, `fitKey`, `comfortZone` | tipo de voz (bajo, barítono, tenor, contralto, mezzo, soprano) a partir de un rango, y tono automático de una canción para ese rango |
 | `Organ` | sonido de órgano sintetizado que mantiene cada nota hasta el final: `play(midi, { duration })`, `noteOn/noteOff` |
 | `Piano` | sonido de piano sintetizado (sin muestras), con la misma interfaz |
 | `PianoKeyboard` | teclado de piano en pantalla (táctil, glissando, teclado del ordenador) con eventos `noteon`/`noteoff` |

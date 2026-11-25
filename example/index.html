@@ -422,6 +422,23 @@
     </div>
   </dialog>
 
+  <!-- ============ PRUEBA DE VOZ ============ -->
+  <dialog class="modal voice-test" id="voice-test" aria-labelledby="vt-title">
+    <p class="eyebrow" id="vt-step"></p>
+    <h2 id="vt-title">Prueba de voz</h2>
+    <p class="muted" id="vt-text"></p>
+    <div class="vt-live" id="vt-live" hidden>
+      <div class="vt-note" id="vt-note" aria-live="polite">–</div>
+      <div class="vt-meter" aria-hidden="true"><i id="vt-level"></i></div>
+      <p class="vt-mark" id="vt-mark"></p>
+    </div>
+    <dl class="breakdown" id="vt-result" hidden></dl>
+    <div class="menu">
+      <button class="btn btn-primary btn-lg" id="vt-next" type="button">Empezar</button>
+      <button class="btn btn-ghost" id="vt-cancel" type="button">Cancelar</button>
+    </div>
+  </dialog>
+
   <!-- ============ SONG SHEET ============ -->
   <dialog class="sheet" id="song-sheet" aria-labelledby="sheet-title">
     <div class="sheet-grip" aria-hidden="true"></div>
@@ -495,12 +512,8 @@
           </div>
         </div>
         <div class="setting">
-          <div class="setting-label"><span>Voz</span><small>Cada canción empieza en un tono cómodo</small></div>
-          <div class="segmented" data-setting="voice" role="radiogroup" aria-label="Voz">
-            <button role="radio" data-value="grave">Grave</button>
-            <button role="radio" data-value="aguda">Aguda</button>
-            <button role="radio" data-value="original">Original</button>
-          </div>
+          <div class="setting-label"><span>Tu voz</span><small id="voice-summary"></small></div>
+          <button class="btn btn-sm" id="voice-test-btn" type="button">Hacer la prueba</button>
         </div>
         <div class="setting">
           <div class="setting-label"><span>Tono</span><small id="transpose-hint">Semitonos, para tu tesitura</small></div>
@@ -612,6 +625,7 @@
     <div class="record" id="record" hidden>¡Nuevo récord!</div>
     <dl class="breakdown" id="breakdown"></dl>
     <button class="help-link center" type="button" data-open-help>¿Cómo se calcula?</button>
+    <button class="btn key-hint" type="button" id="key-hint" hidden></button>
     <div class="menu">
       <button class="btn btn-primary btn-lg" data-action="again">Otra vez</button>
       <button class="btn btn-ghost" data-action="library">Elegir otra canción</button>

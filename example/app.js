@@ -1,4 +1,7 @@
-import { PitchCoach, loadSong, midiToName, songToDraft, joinLyrics, draftToJSON, draftToMidi, songToWav, openMicrophone, checkFeedback, FeedbackGuard } from '../src/index.js';
+import {
+  PitchCoach, loadSong, midiToName, songToDraft, joinLyrics, draftToJSON, draftToMidi, songToWav, openMicrophone, checkFeedback, FeedbackGuard,
+  PitchDetector, classifyVoice, comfortZone, fitKey, tessitura, stablePitches, percentile, DEFAULT_RANGE,
+} from '../src/index.js';
 import { readJSON, writeJSON, removeJSON, clearAllJSON, listImported, saveImported, deleteImported, clearImported } from './store.js';
 import { SongEditor, emptyDraft, EDITOR_DEFAULTS } from './editor.js';
 import { lightColor } from './theme.js';
@@ -24,7 +27,8 @@ const DEFAULT_SETTINGS = {
   accompanimentVolume: 0.18,
   latency: 0.06,
   notation: 'solfege',
-  voice: 'grave',
+  voiceRange: null, // { low, high, speak } de la prueba de voz (MIDI)
+  voiceTestAsked: false,
   theme: 'claro',
 };
 const DIFFICULTY_TEXT = {
@@ -34,7 +38,7 @@ const DIFFICULTY_TEXT = {
 };
 const FORMAT_TEXT = { midi: 'MIDI', ultrastar: 'UltraStar', json: 'JSON' };
 
-const settings = readJSON('settings', DEFAULT_SETTINGS);
+const settings = { ...DEFAULT_SETTINGS, ...readJSON('settings', {}) };
 // versiones anteriores tenían «original» e «invertido»
 settings.theme = settings.theme === 'original' || settings.theme === 'oscuro' ? 'oscuro' : 'claro';
 const perSong = readJSON('per-song', {}); // { id: { transpose, melody } }
@@ -407,26 +411,27 @@ function transposeOf(entry) {
   return entry ? perSong[entry.id]?.transpose ?? 0 : 0;
 }
 
-// Tono de partida según la voz: cada canción se lleva a la octava cómoda y, si aún sube demasiado,
-// se baja algún semitono. «Tono» en Ajustes se suma encima, así que su 0 es este tono cómodo.
-const VOICES = { grave: { center: 55, top: 62 }, aguda: { center: 67, top: 74 } };
+// Tono de partida según tu voz (prueba de voz): la parte central de la canción cae en tu zona
+// cómoda y lo más agudo queda por debajo de tu máximo. «Tono» en Ajustes se suma encima.
 function voiceShift(entry) {
-  const v = VOICES[settings.voice];
-  const s = entry?.song;
-  if (!v || !s?.notes.length) return 0;
-  let shift = 12 * Math.round((v.center - (s.lowest + s.highest) / 2) / 12);
-  const over = s.highest + shift - v.top;
-  if (over > 0) shift -= Math.min(over, 4);
-  return shift;
+  return entry?.song ? fitKey(entry.song, settings.voiceRange ?? DEFAULT_RANGE).shift : 0;
 }
 
-/** Semitonos que se aplican de verdad: voz + ajuste de Tono de la canción. */
+/** Semitonos que se aplican de verdad: tono automático para tu voz + ajuste de Tono de la canción. */
 function keyOf(entry) {
   return voiceShift(entry) + transposeOf(entry);
 }
 
 $('#sheet-settings').addEventListener('click', () => openSettings());
-$('#sing-btn').addEventListener('click', () => startGame('mic'));
+$('#sing-btn').addEventListener('click', async () => {
+  // la primera vez, propone la prueba de voz para que cada canción quede en su tono
+  if (!settings.voiceRange && !settings.voiceTestAsked) {
+    updateSetting({ voiceTestAsked: true });
+    const ok = await askConfirm({ title: '¿Hacemos una prueba de voz?', text: 'Son unos 30 segundos. Así cada canción empieza en un tono cómodo para ti.', ok: 'Hacer la prueba', cancel: 'Ahora no' });
+    if (ok && !(await runVoiceTest())) return;
+  }
+  startGame('mic');
+});
 $('#demo-btn').addEventListener('click', () => startGame('demo'));
 $('#delete-song').addEventListener('click', async () => {
   if (!current?.imported) return;
@@ -597,6 +602,8 @@ function syncSettingsUI() {
     seg.querySelectorAll('button').forEach((b) => b.setAttribute('aria-checked', String(String(settings[key]) === b.dataset.value)));
   });
   $('#difficulty-hint').textContent = DIFFICULTY_TEXT[settings.difficulty][1];
+  $('#voice-summary').textContent = voiceSummary();
+  $('#voice-test-btn').textContent = settings.voiceRange ? 'Repetir prueba' : 'Hacer la prueba';
   const t = transposeOf(current);
   $('#transpose').value = t > 0 ? `+${t}` : String(t);
   $('#tr-down').disabled = !current;
@@ -620,7 +627,7 @@ function updateSetting(patch) {
   Object.assign(settings, patch);
   writeJSON('settings', settings);
   game.set(patch);
-  if ('voice' in patch) {
+  if ('voiceRange' in patch) {
     game.set({ transpose: keyOf(current) });
     if (current && $('#song-sheet').open) openSongSheetStats();
   }
@@ -1178,6 +1185,145 @@ function askConfirm({ title, text = '', ok = 'Aceptar', cancel = 'Cancelar', dan
   });
 }
 
+// ---- Prueba de voz ----------------------------------------------------------------
+
+const VT_STEPS = {
+  intro: { step: '', title: 'Prueba de voz', text: 'Vas a cantar tres cosas cortas para conocer tu voz. Busca un sitio tranquilo; no hacen falta auriculares.', btn: 'Empezar' },
+  speak: { step: 'Paso 1 de 3', title: 'Una nota cómoda', text: 'Di «aaaa» sostenido, en el tono en que hablas normalmente.', btn: 'Escuchando…' },
+  low: { step: 'Paso 2 de 3', title: 'Lo más grave', text: 'Canta «aaaa» y baja poco a poco hasta la nota más grave que te salga sin forzar. Pulsa Listo al llegar.', btn: 'Listo' },
+  high: { step: 'Paso 3 de 3', title: 'Lo más agudo', text: 'Ahora sube poco a poco hasta la nota más aguda que te salga sin forzar ni gritar. Pulsa Listo al llegar.', btn: 'Listo' },
+};
+
+/** Abre la prueba de voz; devuelve true si se guarda un rango nuevo. */
+function runVoiceTest() {
+  const d = $('#voice-test');
+  let phase = 'intro';
+  let frames = [];
+  const found = {};
+  let detector = null;
+  let raf = 0;
+
+  const show = (p) => {
+    phase = p;
+    frames = [];
+    const st = VT_STEPS[p];
+    $('#vt-live').hidden = p === 'intro' || p === 'result';
+    $('#vt-result').hidden = p !== 'result';
+    if (st) {
+      $('#vt-step').textContent = st.step;
+      $('#vt-title').textContent = st.title;
+      $('#vt-text').textContent = st.text;
+      $('#vt-next').textContent = st.btn;
+    }
+    $('#vt-next').disabled = p === 'speak' || p === 'low' || p === 'high';
+    $('#vt-note').textContent = '–';
+    $('#vt-mark').textContent = '';
+  };
+
+  const finish = () => {
+    stop();
+    const low = Math.round(found.low);
+    const high = Math.round(found.high);
+    if (high - low < 7) {
+      $('#vt-step').textContent = '';
+      $('#vt-title').textContent = 'No se ha podido medir bien';
+      $('#vt-text').textContent = 'Hace falta que bajes y subas un poco más. Prueba otra vez con calma.';
+      $('#vt-result').hidden = true;
+      $('#vt-live').hidden = true;
+      $('#vt-next').textContent = 'Repetir';
+      $('#vt-next').disabled = false;
+      phase = 'retry';
+      return;
+    }
+    const range = { low, high, speak: Math.round(found.speak ?? (low + high) / 2) };
+    const type = classifyVoice(range);
+    const zone = comfortZone(range);
+    found.range = range;
+    show('result');
+    $('#vt-step').textContent = 'Resultado';
+    $('#vt-title').textContent = type.name;
+    $('#vt-text').textContent = 'Tipo de voz orientativo según tu rango. Cada canción se pondrá sola en un tono cómodo para ti.';
+    $('#vt-result').innerHTML = `
+      <div><dt>Tu voz</dt><dd>${noteName(low)}–${noteName(high)}</dd></div>
+      <div><dt>Zona cómoda</dt><dd>${noteName(Math.round(zone.low))}–${noteName(Math.round(zone.high))}</dd></div>`;
+    $('#vt-next').textContent = 'Guardar';
+    $('#vt-next').disabled = false;
+  };
+
+  const tick = () => {
+    const p = detector?.read();
+    const m = p?.midi ?? null;
+    frames.push(m);
+    $('#vt-level').style.width = `${Math.min(100, (detector?.volume ?? 0) * 900)}%`;
+    if (m != null) $('#vt-note').textContent = noteName(Math.round(m));
+    const stable = stablePitches(frames);
+    if (phase === 'speak' && stable.length >= 60) {
+      found.speak = percentile(stable, 0.5);
+      show('low');
+    } else if ((phase === 'low' || phase === 'high') && stable.length >= 15) {
+      const v = percentile(stable, phase === 'low' ? 0.03 : 0.97);
+      found[phase] = v;
+      $('#vt-mark').textContent = `${phase === 'low' ? 'Lo más grave' : 'Lo más agudo'}: ${noteName(Math.round(v))}`;
+      $('#vt-next').disabled = false;
+    }
+    raf = requestAnimationFrame(tick);
+  };
+
+  const stop = () => {
+    cancelAnimationFrame(raf);
+    detector?.stop();
+    detector = null;
+  };
+
+  return new Promise((resolve) => {
+    const done = (saved) => {
+      stop();
+      d.removeEventListener('cancel', onCancel);
+      $('#vt-next').onclick = null;
+      $('#vt-cancel').onclick = null;
+      closeDialog(d);
+      resolve(saved);
+    };
+    const onCancel = (e) => {
+      e.preventDefault();
+      done(false);
+    };
+    $('#vt-cancel').onclick = () => done(false);
+    $('#vt-next').onclick = async () => {
+      if (phase === 'intro' || phase === 'retry') {
+        try {
+          releaseMic();
+          detector = new PitchDetector({ audioContext: audio(), minFreq: 55, maxFreq: 1400 });
+          await audio().resume();
+          await detector.start({ loop: false });
+        } catch {
+          toast('No se pudo usar el micrófono', true);
+          return done(false);
+        }
+        show('speak');
+        raf = requestAnimationFrame(tick);
+      } else if (phase === 'low') show('high');
+      else if (phase === 'high') finish();
+      else if (phase === 'result') {
+        updateSetting({ voiceRange: found.range });
+        toast(`Voz guardada: ${classifyVoice(found.range).name}`);
+        done(true);
+      }
+    };
+    d.addEventListener('cancel', onCancel);
+    show('intro');
+    openDialog(d);
+  });
+}
+
+function voiceSummary() {
+  const r = settings.voiceRange;
+  if (!r) return 'Sin prueba: se usa una voz grave estándar';
+  return `${classifyVoice(r).name} · ${noteName(r.low)}–${noteName(r.high)}`;
+}
+
+$('#voice-test-btn').addEventListener('click', () => runVoiceTest());
+
 // ---- HUD ------------------------------------------------------------------------
 
 let shownScore = 0;
@@ -1258,6 +1404,7 @@ function showResults(r) {
     <div><dt>Afinación</dt><dd>${Math.round(r.percent * 100)}%</dd></div>
     <div><dt>Perfectas</dt><dd>${r.counts.perfect}</dd></div>
     <div><dt>Combo máx.</dt><dd>${r.maxCombo}</dd></div>`;
+  showKeyHint();
   openDialog($('#results'));
   countUp($('#result-score'), r.score, 1100);
 }
@@ -1271,6 +1418,33 @@ function countUp(el, target, ms) {
   };
   requestAnimationFrame(step);
 }
+
+// Tras cantar: si fallas sobre todo las notas agudas (o las graves), propone mover esa canción un semitono.
+function showKeyHint() {
+  const hint = $('#key-hint');
+  hint.hidden = true;
+  if (mode !== 'mic' || current.id === 'editor-preview') return;
+  const notes = current.song.notes;
+  const mid = tessitura(current.song);
+  const rate = (sel) => {
+    const st = game.scorer.states.filter((s, i) => s.done && !notes[i].freestyle && sel(notes[i].midi));
+    return st.length >= 4 ? st.filter((s) => s.rating === 'miss').length / st.length : null;
+  };
+  const hi = rate((m) => m > mid);
+  const lo = rate((m) => m < mid);
+  if (hi == null || lo == null) return;
+  const d = hi >= 0.4 && hi - lo >= 0.25 ? -1 : lo >= 0.4 && lo - hi >= 0.25 ? 1 : 0;
+  if (!d) return;
+  hint.dataset.step = d;
+  hint.textContent = d < 0 ? 'Las notas agudas te han costado. Bajar esta canción un semitono' : 'Las notas graves te han costado. Subir esta canción un semitono';
+  hint.hidden = false;
+}
+$('#key-hint').addEventListener('click', (e) => {
+  stepTranspose(Number(e.currentTarget.dataset.step));
+  e.currentTarget.hidden = true;
+  const t = transposeOf(current);
+  toast(`Tono de «${current.song.title}»: ${t > 0 ? '+' : ''}${t}`);
+});
 
 $('#results').addEventListener('click', (e) => {
   const action = e.target.closest('[data-action]')?.dataset.action;

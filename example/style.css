@@ -766,3 +766,16 @@ kbd, code { padding: 1px 6px; border-radius: 6px; background: rgba(var(--c-fffff
 .hud-title-row { display: flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0; }
 .audio-mode { flex: none; display: grid; place-items: center; width: 18px; height: 18px; color: rgba(var(--c-f6f0df), 0.62); }
 .audio-mode svg { width: 16px; height: 16px; }
+
+/* ---------- prueba de voz ---------- */
+
+.voice-test { text-align: center; }
+.voice-test h2 { margin-bottom: 8px; }
+.voice-test #vt-text { margin: 0 0 18px; }
+.vt-live { margin: 6px 0 18px; }
+.vt-note { font-size: 56px; font-weight: 900; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.vt-meter { height: 8px; margin: 12px auto 0; max-width: 220px; border-radius: 99px; background: rgba(var(--c-ffffff), 0.1); overflow: hidden; }
+.vt-meter i { display: block; height: 100%; width: 0; border-radius: inherit; background: rgb(var(--c-1fd1b5)); transition: width 0.08s; }
+.vt-mark { min-height: 20px; margin: 12px 0 0; font-weight: 800; color: var(--muted); }
+.voice-test .breakdown { grid-template-columns: repeat(2, 1fr); margin-top: 4px; }
+.key-hint { width: 100%; margin: 4px 0 14px; white-space: normal; }

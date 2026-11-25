@@ -117,3 +117,15 @@ test('JSON explicit form in seconds', async () => {
   assert.equal(song.notes[0].midi, 69);
   assert.equal(song.duration, 0.75);
 });
+
+test('readZip abre un paquete con entradas comprimidas, sin comprimir y nombres UTF-8', async () => {
+  const { readZip, isZip } = await import('../src/index.js');
+  const bytes = readFileSync(new URL('../test/fixtures/paquete.zip', import.meta.url));
+  assert.ok(isZip(bytes));
+  const files = await readZip(bytes);
+  assert.deepEqual(files.map((f) => f.name), ['canciones/estrellita.txt', 'canciones/martinillo.mid', 'canciones/año nuevo.json']);
+  const star = await loadSong(new TextDecoder().decode(files[0].bytes));
+  assert.equal(star.title, 'Estrellita');
+  const mid = await loadSong(files[1].bytes);
+  assert.equal(mid.title, 'Martinillo');
+});

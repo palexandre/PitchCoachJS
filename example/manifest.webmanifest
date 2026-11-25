@@ -35,7 +35,8 @@
       "accept": {
         "audio/midi": [".mid", ".midi", ".kar"],
         "text/plain": [".txt"],
-        "application/json": [".json"]
+        "application/json": [".json"],
+        "application/zip": [".zip"]
       }
     }
   ],

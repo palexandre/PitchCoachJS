@@ -20,5 +20,6 @@ export { invertColor, invertibleContext, themedContext } from './colors.js';
 export { parseMidi, midiToSong } from './formats/midi.js';
 export { ultrastarToSong } from './formats/ultrastar.js';
 export { jsonToSong } from './formats/json.js';
+export { readZip, isZip } from './formats/zip.js';
 export { midiToFreq, freqToMidi, midiToName, parsePitch } from './notes.js';
 export { VOICE_TYPES, DEFAULT_RANGE, classifyVoice, comfortZone, tessitura, fitKey, stablePitches, percentile } from './voice.js';

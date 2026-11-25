@@ -1,6 +1,6 @@
 import {
   PitchCoach, loadSong, midiToName, songToDraft, joinLyrics, draftToJSON, draftToMidi, songToWav, openMicrophone, checkFeedback, FeedbackGuard,
-  PitchDetector, classifyVoice, comfortZone, fitKey, tessitura, stablePitches, percentile, DEFAULT_RANGE,
+  readZip, isZip, PitchDetector, classifyVoice, comfortZone, fitKey, tessitura, stablePitches, percentile, DEFAULT_RANGE,
 } from '../src/index.js';
 import { readJSON, writeJSON, removeJSON, clearAllJSON, listImported, saveImported, deleteImported, clearImported } from './store.js';
 import { SongEditor, emptyDraft, EDITOR_DEFAULTS } from './editor.js';
@@ -326,9 +326,12 @@ function sameTitle(a, b) {
   return norm(a) === norm(b);
 }
 
+const SONG_EXT = /\.(mid|midi|kar|txt|json)$/i;
+
 async function importFile(file) {
   if (!file) return;
   const bytes = await file.arrayBuffer();
+  if (/\.zip$/i.test(file.name) || isZip(bytes)) return importPack(file.name, bytes);
   const entry = { id: `imp-${Date.now()}`, name: file.name, source: bytes, imported: true, addedAt: Date.now() };
   await parseEntry(entry);
   if (!entry.song) return toast(`No se pudo leer «${file.name}»: ${entry.error}`, true);
@@ -347,6 +350,68 @@ async function importFile(file) {
   renderLibrary();
   if (entry.song.meta.format === 'midi' && !entry.song.meta.hasLyrics) toast('Este MIDI no trae letra: podrás cantarlo con vocales');
   openSongSheet(entry);
+}
+
+/**
+ * Paquete de canciones: un ZIP con archivos MIDI, KAR, UltraStar o JSON (en carpetas o no).
+ * Las que ya vienen en la app se saltan; si alguna ya la tenías importada, se pregunta una vez
+ * si reemplazarlas todas (conservando récords y tono) o dejar las tuyas.
+ */
+async function importPack(name, bytes) {
+  let files;
+  try {
+    files = (await readZip(bytes)).filter((f) => SONG_EXT.test(f.name) && !/(^|\/)(__MACOSX|\.)/.test(f.name));
+  } catch (err) {
+    return toast(`No se pudo abrir «${name}»: ${err.message}`, true);
+  }
+  if (!files.length) return toast(`«${name}» no tiene canciones (MIDI, KAR, TXT o JSON)`, true);
+
+  const now = Date.now();
+  const fresh = [];
+  const failed = [];
+  for (const [i, f] of files.entries()) {
+    const base = f.name.split('/').pop();
+    const source = f.bytes.buffer.slice(f.bytes.byteOffset, f.bytes.byteOffset + f.bytes.byteLength);
+    const entry = { id: `imp-${now}-${i}`, name: base, source, imported: true, addedAt: now - i };
+    await parseEntry(entry);
+    if (entry.song?.notes.length) fresh.push(entry);
+    else failed.push(base);
+  }
+  // repetidas dentro del propio paquete: vale la primera
+  const unique = fresh.filter((e, i) => fresh.findIndex((o) => sameTitle(o.song.title, e.song.title)) === i);
+  const builtinDup = [];
+  const importedDup = [];
+  const added = [];
+  for (const e of unique) {
+    const dup = library.find((o) => o.song && sameTitle(o.song.title, e.song.title));
+    if (!dup) added.push(e);
+    else if (dup.imported) importedDup.push([e, dup]);
+    else builtinDup.push(e);
+  }
+  let replace = false;
+  if (importedDup.length) {
+    const list = importedDup.slice(0, 6).map(([, d]) => `«${d.song.title}»`).join(', ') + (importedDup.length > 6 ? ` y ${importedDup.length - 6} más` : '');
+    replace = await askConfirm({
+      title: importedDup.length === 1 ? 'Ya tienes una de estas canciones' : `Ya tienes ${importedDup.length} de estas canciones`,
+      text: `${list}. ¿Las reemplazo por las del paquete? Se conservan tus récords y el tono de cada una.`,
+      ok: 'Reemplazar',
+      cancel: 'Dejar las mías',
+    });
+    if (replace) for (const [e, d] of importedDup) {
+      e.id = d.id;
+      added.push(e);
+    }
+  }
+  for (const e of added) await saveImported({ id: e.id, name: e.name, bytes: e.source, addedAt: e.addedAt });
+  const ids = new Set(added.map((e) => e.id));
+  library = [...added, ...library.filter((e) => !ids.has(e.id))];
+  renderLibrary();
+
+  const parts = [added.length ? `${plural(added.length, 'canción importada', 'canciones importadas')}` : 'Ninguna canción nueva'];
+  if (builtinDup.length) parts.push(`${builtinDup.length} ya venían en la app`);
+  if (importedDup.length && !replace) parts.push(`${importedDup.length} ya las tenías`);
+  if (failed.length) parts.push(`${failed.length} no se pudieron leer`);
+  toast(parts.join(' · '), !added.length && failed.length > 0);
 }
 
 $('#file').addEventListener('change', (e) => {

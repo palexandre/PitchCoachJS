@@ -523,6 +523,13 @@ $('#share-song').addEventListener('click', async () => {
   shareText(`🎵 «${current.song.title}»: ábrela con PitchCoach para practicarla`, url);
 });
 
+/** Mismas notas, ritmo y letra (con el margen de redondeo del enlace). */
+function sameSong(a, b) {
+  if (a.notes.length !== b.notes.length) return false;
+  const ok = a.notes.every((n, i) => n.midi === b.notes[i].midi && Math.abs(n.start - b.notes[i].start) < 0.02 && Math.abs(n.end - b.notes[i].end) < 0.02);
+  return ok && a.lines.map((l) => l.text.trim()).join('|') === b.lines.map((l) => l.text.trim()).join('|');
+}
+
 /** Abre una canción recibida en un enlace (#c=…) y pregunta si añadirla. */
 async function openSharedLink() {
   const m = location.hash.match(/^#c=([A-Za-z0-9_-]+)/);
@@ -539,7 +546,14 @@ async function openSharedLink() {
   const bytes = new TextEncoder().encode(json);
   const file = { name: `${title}.json`, arrayBuffer: async () => bytes.buffer };
   const dup = library.find((e) => e.song && sameTitle(e.song.title, title));
-  if (!dup) {
+  if (dup) {
+    // la misma canción que ya tienes (p. ej. la abres en el móvil desde el que la compartiste): solo se abre
+    const shared = await loadSong(json, { name: 'enlace.json' }).catch(() => null);
+    if (shared && sameSong(shared, dup.song)) {
+      openSongSheet(dup);
+      return toast('Ya tienes esta canción en tu biblioteca');
+    }
+  } else {
     const ok = await askConfirm({ title: 'Te han compartido una canción', text: `«${title}». ¿La añado a tu biblioteca?`, ok: 'Añadir', cancel: 'Ahora no' });
     if (!ok) return;
   }

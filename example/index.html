@@ -449,6 +449,10 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg>
             <span>Escuchar</span>
           </button>
+          <button class="btn btn-ghost" id="lyrics-btn" aria-label="Ver la letra">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h9l4 4V20a.5.5 0 0 1-.5.5h-12A.5.5 0 0 1 6 20z"/><path d="M14.5 3.5v4.5h4.5M9 12h7M9 15.5h7M9 9h3"/></svg>
+            <span>Letra</span>
+          </button>
           <button class="btn btn-ghost" id="edit-btn">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4ZM13.5 6.5l4 4"/></svg>
             <span>Editar</span>
@@ -461,6 +465,19 @@
       </div>
 
       <button class="link-danger" id="delete-song" hidden>Quitar de la biblioteca</button>
+    </div>
+  </dialog>
+
+  <!-- ============ LETRA ============ -->
+  <dialog class="sheet" id="lyrics" aria-labelledby="lyrics-title">
+    <div class="sheet-grip" aria-hidden="true"></div>
+    <div class="sheet-body">
+      <div class="sheet-title-row">
+        <h2 id="lyrics-title"></h2>
+        <button class="icon-btn" data-close aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </div>
+      <p class="muted lyrics-artist" id="lyrics-artist"></p>
+      <div class="lyrics-text" id="lyrics-text"></div>
     </div>
   </dialog>
 

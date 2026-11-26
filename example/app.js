@@ -508,6 +508,24 @@ $('#delete-song').addEventListener('click', async () => {
 });
 $('#edit-btn').addEventListener('click', () => openEditorWith(current));
 
+// Letra completa, con un hueco entre estrofas donde la música hace una pausa larga
+$('#lyrics-btn').addEventListener('click', () => {
+  const s = current?.song;
+  if (!s) return;
+  $('#lyrics-title').textContent = s.title;
+  $('#lyrics-artist').textContent = current.artist || s.artist || '';
+  $('#lyrics-artist').hidden = !$('#lyrics-artist').textContent;
+  const lines = s.lines.filter((l) => l.text.trim());
+  $('#lyrics-text').innerHTML = lines.length
+    ? lines.map((l, i) => {
+      const gap = i > 0 && l.start - lines[i - 1].end >= 1.5 ? '<div class="stanza-gap"></div>' : '';
+      return `${gap}<p>${escapeHTML(l.text.trim())}</p>`;
+    }).join('')
+    : '<p class="muted">Esta canción no tiene letra.</p>';
+  openDialog($('#lyrics'));
+  $('#lyrics').scrollTop = 0;
+});
+
 // ---- compartir una canción en un enlace -------------------------------------------
 // La canción entera (melodía y letra, no los ajustes de cada uno) va comprimida tras el «#».
 

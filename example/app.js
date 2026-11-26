@@ -1210,16 +1210,6 @@ function openExport({ song, json = null }) {
   openDialog($('#export'));
 }
 
-$('#export-btn').addEventListener('click', () => {
-  let json = null;
-  if (current.own) {
-    try {
-      json = JSON.parse(new TextDecoder().decode(current.source));
-    } catch { /* se genera de nuevo */ }
-  }
-  openExport({ song: current.song, json });
-});
-
 $('#export').addEventListener('click', async (e) => {
   const btn = e.target.closest('[data-format]');
   if (!btn || !exportTarget) return;

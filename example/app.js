@@ -520,7 +520,7 @@ $('#share-song').addEventListener('click', async () => {
   try {
     const code = await songToCode(current.song);
     const url = (await shortLink(code)) ?? `${appURL()}#c=${code}`;
-    shareText(`🎵 «${current.song.title}»: ábrela con PitchCoach para practicarla`, url);
+    shareText(`🎵 ${current.song.title}`, url);
   } catch {
     toast('Este navegador no puede crear el enlace', true);
   } finally {

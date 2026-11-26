@@ -1,6 +1,6 @@
 import {
   PitchCoach, loadSong, midiToName, songToDraft, joinLyrics, draftToJSON, draftToMidi, songToWav, openMicrophone, checkFeedback, FeedbackGuard,
-  readZip, isZip, songToCode, codeToJSON, PitchDetector, classifyVoice, comfortZone, fitKey, tessitura, stablePitches, percentile, DEFAULT_RANGE,
+  readZip, isZip, songToCode, codeToJSON, sealCode, openCode, PitchDetector, classifyVoice, comfortZone, fitKey, tessitura, stablePitches, percentile, DEFAULT_RANGE,
 } from '../src/index.js';
 import { readJSON, writeJSON, removeJSON, clearAllJSON, listImported, saveImported, deleteImported, clearImported } from './store.js';
 import { SongEditor, emptyDraft, EDITOR_DEFAULTS } from './editor.js';
@@ -513,15 +513,44 @@ $('#edit-btn').addEventListener('click', () => openEditorWith(current));
 
 $('#share-song').addEventListener('click', async () => {
   if (!current?.song) return;
-  let code;
+  const btn = $('#share-song');
+  const label = btn.querySelector('span');
+  btn.disabled = true;
+  label.textContent = 'Creando…';
   try {
-    code = await songToCode(current.song);
+    const code = await songToCode(current.song);
+    const url = (await shortLink(code)) ?? `${appURL()}#c=${code}`;
+    shareText(`🎵 «${current.song.title}»: ábrela con PitchCoach para practicarla`, url);
   } catch {
-    return toast('Este navegador no puede crear el enlace', true);
+    toast('Este navegador no puede crear el enlace', true);
+  } finally {
+    btn.disabled = false;
+    label.textContent = 'Compartir';
   }
-  const url = `${new URL('./', location.href).href}#c=${code}`;
-  shareText(`🎵 «${current.song.title}»: ábrela con PitchCoach para practicarla`, url);
 });
+
+const appURL = () => new URL('./', location.href).href;
+
+/**
+ * Enlace corto con is.gd (sin cuenta). La canción va cifrada en el enlace largo (?d=…), que es lo
+ * único que ve is.gd; la clave va solo en el «#» del enlace corto, que el navegador conserva al
+ * redirigir y no se envía a ningún servidor. Devuelve null si no se puede (sin conexión, etc.).
+ */
+async function shortLink(code) {
+  try {
+    const { data, key } = await sealCode(code);
+    const long = `${appURL()}?d=${data}`;
+    if (long.length > 4900) return null; // límite de is.gd
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 6000);
+    const res = await fetch(`https://is.gd/create.php?format=json&url=${encodeURIComponent(long)}`, { signal: ctl.signal });
+    clearTimeout(timer);
+    const json = await res.json();
+    return json.shorturl ? `${json.shorturl}#k=${key}` : null;
+  } catch {
+    return null;
+  }
+}
 
 /** Mismas notas, ritmo y letra (con el margen de redondeo del enlace). */
 function sameSong(a, b) {
@@ -533,12 +562,14 @@ function sameSong(a, b) {
 /** Abre una canción recibida en un enlace (#c=…) y pregunta si añadirla. */
 async function openSharedLink() {
   const m = location.hash.match(/^#c=([A-Za-z0-9_-]+)/);
-  if (!m) return;
-  history.replaceState(history.state, '', location.pathname + location.search);
+  const sealed = new URLSearchParams(location.search).get('d');
+  const k = location.hash.match(/^#k=([A-Za-z0-9_-]+)/);
+  if (!m && !(sealed && k)) return;
+  history.replaceState(history.state, '', location.pathname);
   await ready;
   let json;
   try {
-    json = await codeToJSON(m[1]);
+    json = await codeToJSON(m ? m[1] : await openCode(sealed, k[1]));
   } catch (err) {
     return toast(`No se pudo abrir la canción del enlace: ${err.message}`, true);
   }

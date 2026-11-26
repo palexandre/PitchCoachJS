@@ -94,6 +94,34 @@ export async function codeToJSON(code) {
   return JSON.stringify({ title, artist, notes });
 }
 
+/**
+ * Cifra un código (AES-GCM, clave aleatoria de 128 bits) para que un acortador de enlaces solo
+ * guarde texto ilegible: `data` va en el enlace largo y `key` solo en el «#» del enlace corto.
+ * @returns {Promise<{data: string, key: string}>} ambos en base64url
+ */
+export async function sealCode(code) {
+  const raw = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt']);
+  const enc = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, fromBase64url(code)));
+  const out = new Uint8Array(iv.length + enc.length);
+  out.set(iv);
+  out.set(enc, iv.length);
+  return { data: toBase64url(out), key: toBase64url(raw) };
+}
+
+/** Descifra lo que hizo sealCode; falla si la clave no es la buena o el texto está dañado. */
+export async function openCode(data, keyText) {
+  const all = fromBase64url(data);
+  const key = await crypto.subtle.importKey('raw', fromBase64url(keyText), 'AES-GCM', false, ['decrypt']);
+  try {
+    const dec = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: all.subarray(0, 12) }, key, all.subarray(12));
+    return toBase64url(new Uint8Array(dec));
+  } catch {
+    throw new Error('El enlace está incompleto o la clave no corresponde');
+  }
+}
+
 async function deflate(bytes) {
   const s = new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate-raw'));
   return new Uint8Array(await new Response(s).arrayBuffer());

@@ -146,3 +146,15 @@ test('songToCode / codeToJSON: la canción viaja en un enlace corto y vuelve igu
   assert.deepEqual(back.lines.map((l) => l.text.trim()), song.lines.map((l) => l.text.trim()));
   assert.equal(back.notes.filter((n) => n.golden).length, song.notes.filter((n) => n.golden).length);
 });
+
+test('sealCode / openCode: cifrado para el acortador, la clave aparte', async () => {
+  const { songToCode, sealCode, openCode } = await import('../src/index.js');
+  const song = await loadSong(readFileSync(new URL('estrellita.txt', fixturesDir), 'utf8'));
+  const code = await songToCode(song);
+  const { data, key } = await sealCode(code);
+  assert.equal(key.length, 22);
+  assert.ok(!data.includes(code.slice(0, 12)));
+  assert.equal(await openCode(data, key), code);
+  const other = (await sealCode(code)).key;
+  await assert.rejects(openCode(data, other));
+});

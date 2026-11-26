@@ -23,4 +23,4 @@ export { jsonToSong } from './formats/json.js';
 export { readZip, isZip } from './formats/zip.js';
 export { midiToFreq, freqToMidi, midiToName, parsePitch } from './notes.js';
 export { VOICE_TYPES, DEFAULT_RANGE, classifyVoice, comfortZone, tessitura, fitKey, stablePitches, percentile } from './voice.js';
-export { songToCode, codeToJSON } from './formats/link.js';
+export { songToCode, codeToJSON, sealCode, openCode } from './formats/link.js';

@@ -1,6 +1,6 @@
 import {
   PitchCoach, loadSong, midiToName, songToDraft, joinLyrics, draftToJSON, draftToMidi, songToWav, openMicrophone, checkFeedback, FeedbackGuard,
-  readZip, isZip, PitchDetector, classifyVoice, comfortZone, fitKey, tessitura, stablePitches, percentile, DEFAULT_RANGE,
+  readZip, isZip, songToCode, codeToJSON, PitchDetector, classifyVoice, comfortZone, fitKey, tessitura, stablePitches, percentile, DEFAULT_RANGE,
 } from '../src/index.js';
 import { readJSON, writeJSON, removeJSON, clearAllJSON, listImported, saveImported, deleteImported, clearImported } from './store.js';
 import { SongEditor, emptyDraft, EDITOR_DEFAULTS } from './editor.js';
@@ -457,7 +457,7 @@ function openSongSheet(entry) {
          <svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></svg></button>`
     : '';
   $('#delete-song').hidden = !entry.imported;
-  $('#edit-btn span').textContent = entry.own ? 'Editar' : 'Editar copia';
+  $('#edit-btn span').textContent = 'Editar';
   renderChips();
   openDialog($('#song-sheet'));
 }
@@ -507,6 +507,45 @@ $('#delete-song').addEventListener('click', async () => {
   toast('Canción eliminada');
 });
 $('#edit-btn').addEventListener('click', () => openEditorWith(current));
+
+// ---- compartir una canción en un enlace -------------------------------------------
+// La canción entera (melodía y letra, no los ajustes de cada uno) va comprimida tras el «#».
+
+$('#share-song').addEventListener('click', async () => {
+  if (!current?.song) return;
+  let code;
+  try {
+    code = await songToCode(current.song);
+  } catch {
+    return toast('Este navegador no puede crear el enlace', true);
+  }
+  const url = `${new URL('./', location.href).href}#c=${code}`;
+  shareText(`🎵 «${current.song.title}»: ábrela con PitchCoach para practicarla`, url);
+});
+
+/** Abre una canción recibida en un enlace (#c=…) y pregunta si añadirla. */
+async function openSharedLink() {
+  const m = location.hash.match(/^#c=([A-Za-z0-9_-]+)/);
+  if (!m) return;
+  history.replaceState(history.state, '', location.pathname + location.search);
+  await ready;
+  let json;
+  try {
+    json = await codeToJSON(m[1]);
+  } catch (err) {
+    return toast(`No se pudo abrir la canción del enlace: ${err.message}`, true);
+  }
+  const title = JSON.parse(json).title || 'Sin título';
+  const bytes = new TextEncoder().encode(json);
+  const file = { name: `${title}.json`, arrayBuffer: async () => bytes.buffer };
+  const dup = library.find((e) => e.song && sameTitle(e.song.title, title));
+  if (!dup) {
+    const ok = await askConfirm({ title: 'Te han compartido una canción', text: `«${title}». ¿La añado a tu biblioteca?`, ok: 'Añadir', cancel: 'Ahora no' });
+    if (!ok) return;
+  }
+  importFile(file); // si ya la tienes, aquí se pregunta si reemplazarla
+}
+addEventListener('hashchange', () => openSharedLink());
 
 async function removeSong(id) {
   await deleteImported(id);
@@ -1402,8 +1441,7 @@ function runVoiceTest() {
 }
 
 /** Comparte un texto con el enlace a la app: menú del sistema (WhatsApp, etc.) o, si no hay, WhatsApp directo. */
-async function shareText(text) {
-  const url = new URL('./', location.href).href;
+async function shareText(text, url = new URL('./', location.href).href) {
   if (navigator.share) {
     try {
       await navigator.share({ text, url });
@@ -1761,6 +1799,9 @@ addEventListener('appinstalled', () => {
   $('#install-btn').hidden = true;
   toast('PitchCoach instalada. Ya puedes abrirla desde su icono.');
 });
+
+// Canción compartida por enlace (#c=…)
+openSharedLink();
 
 // Acceso directo «Crear canción» del icono de la app
 if (new URLSearchParams(location.search).get('accion') === 'crear') {

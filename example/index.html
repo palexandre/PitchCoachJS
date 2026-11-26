@@ -458,8 +458,8 @@
           <h2 id="sheet-title"></h2>
           <p class="muted" id="sheet-artist"></p>
         </div>
-        <button class="icon-btn" id="export-btn" aria-label="Exportar canción" title="Exportar">
-          <svg viewBox="0 0 24 24"><path d="M12 15V3m0 0L8 7m4-4 4 4M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>
+        <button class="icon-btn" id="export-btn" aria-label="Descargar canción" title="Descargar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
         </button>
       </div>
 
@@ -478,10 +478,17 @@
           <span>Cantar</span>
         </button>
         <div class="sheet-actions-row">
-          <button class="btn btn-ghost" id="demo-btn">Escuchar demo</button>
+          <button class="btn btn-ghost" id="demo-btn" aria-label="Escuchar demo">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg>
+            <span>Escuchar</span>
+          </button>
           <button class="btn btn-ghost" id="edit-btn">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4ZM13.5 6.5l4 4"/></svg>
             <span>Editar</span>
+          </button>
+          <button class="btn btn-ghost" id="share-song">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.4M8.2 13.2l7.6 4.4"/></svg>
+            <span>Compartir</span>
           </button>
         </div>
       </div>
@@ -721,7 +728,7 @@
 
       <section>
         <h3>6 · Récords</h3>
-        <p>Tu récord de cada canción es tu <b>mejor puntuación</b> cantando con el micrófono. El modo «Escuchar demo» no cuenta. Los récords se guardan solo en este dispositivo y puedes borrarlos en Ajustes → Tus datos.</p>
+        <p>Tu récord de cada canción es tu <b>mejor puntuación</b> cantando con el micrófono. El modo «Escuchar» (demo) no cuenta. Los récords se guardan solo en este dispositivo y puedes borrarlos en Ajustes → Tus datos.</p>
       </section>
 
       <button class="btn btn-primary" data-close>Entendido</button>

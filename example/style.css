@@ -430,7 +430,10 @@ body.dragging .drop-overlay { opacity: 1; }
 .home-actions .import-card { margin-top: 0; width: 100%; text-align: left; font: inherit; color: inherit; background: transparent; }
 .create-card { border-style: solid; border-color: rgba(var(--c-1fd1b5), 0.35); background: rgba(var(--c-1fd1b5), 0.06) !important; }
 .create-card .import-icon { background: var(--accent); color: var(--accent-ink); }
-.sheet-actions-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sheet-actions-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.sheet-actions-row .btn { min-width: 0; padding: 0 2px; gap: 5px; font-size: 14px; white-space: nowrap; }
+.sheet-actions-row .btn span { overflow: hidden; text-overflow: ellipsis; }
+.sheet-actions-row svg { flex: none; width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .btn-sm { min-height: 38px; padding: 0 14px; font-size: 15px; border-radius: 12px; }
 .btn-danger { background: var(--danger) !important; color: var(--accent-ink) !important; box-shadow: none !important; }
 .small { font-size: 13px; }

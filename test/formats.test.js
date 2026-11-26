@@ -129,3 +129,20 @@ test('readZip abre un paquete con entradas comprimidas, sin comprimir y nombres 
   const mid = await loadSong(files[1].bytes);
   assert.equal(mid.title, 'Martinillo');
 });
+
+test('songToCode / codeToJSON: la canción viaja en un enlace corto y vuelve igual', async () => {
+  const { songToCode, codeToJSON } = await import('../src/index.js');
+  const song = await loadSong(readFileSync(new URL('estrellita.txt', fixturesDir), 'utf8'));
+  const code = await songToCode(song);
+  assert.match(code, /^[A-Za-z0-9_-]+$/);
+  const back = await loadSong(await codeToJSON(code));
+  assert.equal(back.title, song.title);
+  assert.equal(back.notes.length, song.notes.length);
+  back.notes.forEach((n, i) => {
+    assert.equal(n.midi, song.notes[i].midi);
+    assert.ok(Math.abs(n.start - song.notes[i].start) < 0.006);
+    assert.ok(Math.abs(n.end - song.notes[i].end) < 0.011);
+  });
+  assert.deepEqual(back.lines.map((l) => l.text.trim()), song.lines.map((l) => l.text.trim()));
+  assert.equal(back.notes.filter((n) => n.golden).length, song.notes.filter((n) => n.golden).length);
+});

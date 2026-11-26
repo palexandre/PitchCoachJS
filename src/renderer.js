@@ -7,7 +7,7 @@ import { themedContext, invertColor } from './colors.js';
 
 export const DEFAULT_THEME = {
   background: ['#2b0d6e', '#3a128c'],
-  grid: 'rgba(255,255,255,0.06)',
+  grid: 'rgba(255,255,255,0.1)',
   gridLabel: 'rgba(255,255,255,0.28)',
   upcoming: 'rgba(255,255,255,0.38)',
   past: '#f4edd9',
@@ -259,21 +259,29 @@ export class Renderer {
   _drawGrid() {
     const { ctx, theme } = this;
     const [lo, hi] = this.range();
-    ctx.font = this._font(10, 700);
+    const gap = Math.abs(this.yFor(lo) - this.yFor(lo + 2)); // espacio entre dos notas naturales
+    const every = gap >= 13; // si hay sitio, una línea por nota natural; si no, solo Do y Sol
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'left';
     for (let m = Math.ceil(lo); m <= hi; m++) {
       const pc = ((m % 12) + 12) % 12;
-      if (pc !== 0 && pc !== 7) continue; // Do and Sol lines
+      const natural = [0, 2, 4, 5, 7, 9, 11].includes(pc);
+      if (every ? !natural : pc !== 0 && pc !== 7) continue;
       const y = this.yFor(m);
-      ctx.strokeStyle = theme.grid;
-      ctx.lineWidth = pc === 0 ? 1.5 : 1;
+      const doLine = pc === 0;
+      // el Do, más marcado: referencia de octava
+      ctx.strokeStyle = doLine ? theme.gridLabel : theme.grid;
+      ctx.lineWidth = doLine ? 1.2 : 1;
+      ctx.globalAlpha = doLine ? 0.55 : 1;
       ctx.beginPath();
       ctx.moveTo(0, y);
       ctx.lineTo(this.width, y);
       ctx.stroke();
+      ctx.globalAlpha = 1;
       ctx.fillStyle = theme.gridLabel;
-      ctx.fillText(midiToName(m, { notation: this.options.notation }), 6, y - 7);
+      ctx.font = this._font(doLine ? 11 : 10, doLine ? 900 : 700);
+      // el Do lleva la octava (Do4), las demás solo el nombre
+      ctx.fillText(midiToName(m, { notation: this.options.notation, octave: doLine }), 6, y - 7);
     }
   }
 

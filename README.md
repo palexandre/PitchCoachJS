@@ -34,7 +34,7 @@ La página de ejemplo es una app completa y responsive (móvil primero):
   - Grabar **cantando**, o tocando el **piano de la pantalla** / el teclado del ordenador (`A W S E D F T G Y H U J K`, `Z`/`X` cambian de octava).
   - Escribir nota a nota: elige la duración (semicorchea… redonda), toca una tecla y la nota se añade en el cursor. Toca una nota para seleccionarla, arrástrala para moverla o estira su borde para alargarla.
   - **Letra** como texto normal (`can-ción`, salto de línea = frase nueva) que se reparte sola entre las notas, con contador de sílabas/notas.
-  - Escuchar con órgano y metrónomo, tempo y compás, deshacer/rehacer, autoguardado del borrador, **Probar cantando** y exportar a **JSON** o **MIDI con letra**.
+  - Escuchar con órgano y metrónomo, tempo y compás, deshacer/rehacer, autoguardado del borrador y **Probar cantando**. Las canciones se guardan en tu biblioteca, dentro del dispositivo; para pasarlas a otros, **Compartir** desde su ficha.
 - Arrastra un `.mid`, `.kar`, `.txt` (UltraStar) o `.json` sobre la página para importarlo.
 
 ## Instalar como app (PWA)

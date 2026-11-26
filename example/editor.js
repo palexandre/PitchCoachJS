@@ -1,5 +1,5 @@
 // Song editor for the example app: piano roll, on-screen piano, step entry,
-// real-time recording (piano or voice), lyrics and export.
+// real-time recording (piano or voice) and lyrics.
 import {
   Organ, PianoKeyboard, NoteRecorder, PitchDetector,
   splitLyrics, midiToName, draftToJSON, themedContext, legatoGroups, outputDelay,
@@ -934,7 +934,6 @@ export class SongEditor {
     $('#ed-rest').addEventListener('click', () => this.insertRest());
     $('#ed-tempo-chip').addEventListener('click', () => this.openMenu());
     $('#ed-more').addEventListener('click', () => this.openMenu());
-    $('#ed-export').addEventListener('click', () => this.exportSong());
     $('#ed-zoom-in').addEventListener('click', () => this.zoom(1.25));
     $('#ed-zoom-out').addEventListener('click', () => this.zoom(0.8));
     $('#ed-oct-down').addEventListener('click', () => this.keyboard.shiftOctave(-1));
@@ -1028,10 +1027,6 @@ export class SongEditor {
         this.stop();
         this.o.onTry(this.toJSON());
       }
-      if (a === 'export') {
-        this.o.closeDialog($('#ed-menu'));
-        this.exportSong();
-      }
       if (a === 'clear') {
         this.o.closeDialog($('#ed-menu'));
         this.change(() => {
@@ -1058,13 +1053,6 @@ export class SongEditor {
         this.o.onExit();
       }
     });
-  }
-
-  /** Exports what is in the editor right now, saved or not. */
-  exportSong() {
-    if (!this.notes.length) return this.o.toast('Añade alguna nota antes de exportar', true);
-    this.stop();
-    this.o.onExport(this.toJSON());
   }
 
   openMenu() {

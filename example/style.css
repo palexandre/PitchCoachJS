@@ -799,3 +799,8 @@ kbd, code { padding: 1px 6px; border-radius: 6px; background: rgba(var(--c-fffff
 .lyrics-text { display: grid; gap: 4px; padding-bottom: 8px; }
 .lyrics-text p { margin: 0; font-size: 17px; line-height: 1.45; font-weight: 600; }
 .lyrics-text .stanza-gap { height: 14px; }
+
+.help-table td:last-child, .help-table th:last-child { text-align: right; white-space: nowrap; }
+.help-stars { display: inline-flex; gap: 1px; color: var(--gold); vertical-align: -3px; }
+.help-stars svg { width: 17px; height: 17px; }
+.help-upto { font-size: 12px; font-weight: 800; color: var(--muted); }

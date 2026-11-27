@@ -619,6 +619,16 @@ async function removeSong(id) {
 
 // ---- ayuda ------------------------------------------------------------------------
 
+// Estrellas dibujadas en la tabla de «¿Cómo se puntúa?» (también las medias)
+const STAR_PATH = 'M12 2.6l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17l-5.7 3.1 1.2-6.4L2.8 9.3l6.4-.8z';
+document.querySelectorAll('.help-stars').forEach((el, k) => {
+  const n = Number(el.dataset.stars);
+  el.innerHTML = Array.from({ length: 5 }, (_, i) => {
+    const fill = Math.max(0, Math.min(1, n - i)) * 100;
+    return `<svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="hs${k}-${i}"><stop offset="${fill}%" stop-color="currentColor"/><stop offset="${fill}%" stop-color="currentColor" stop-opacity="0.18"/></linearGradient></defs><path fill="url(#hs${k}-${i})" d="${STAR_PATH}"/></svg>`;
+  }).join('');
+});
+
 document.querySelectorAll('[data-open-help]').forEach((b) => b.addEventListener('click', () => openDialog($('#scoring-help'))));
 
 // ---- aspecto ---------------------------------------------------------------------

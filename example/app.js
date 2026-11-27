@@ -28,7 +28,6 @@ const DEFAULT_SETTINGS = {
   latency: 0.06,
   notation: 'solfege',
   voiceRange: null, // { low, high, speak } de la prueba de voz (MIDI)
-  voiceTestAsked: false,
   theme: 'claro',
 };
 const DIFFICULTY_TEXT = {
@@ -489,12 +488,8 @@ function keyOf(entry) {
 
 $('#sheet-settings').addEventListener('click', () => openSettings());
 $('#sing-btn').addEventListener('click', async () => {
-  // la primera vez, propone la prueba de voz para que cada canción quede en su tono
-  if (!settings.voiceRange && !settings.voiceTestAsked) {
-    updateSetting({ voiceTestAsked: true });
-    const ok = await askConfirm({ title: '¿Hacemos una prueba de voz?', text: 'Son unos 30 segundos. Así cada canción empieza en un tono cómodo para ti.', ok: 'Hacer la prueba', cancel: 'Ahora no' });
-    if (ok && !(await runVoiceTest())) return;
-  }
+  // sin prueba de voz no se canta: así cada canción está siempre en un tono cómodo para ti
+  if (!settings.voiceRange && !(await runVoiceTest({ beforeSinging: true }))) return;
   startGame('mic');
 });
 $('#demo-btn').addEventListener('click', () => startGame('demo'));
@@ -1285,7 +1280,7 @@ const vtPos = (m) => `${(Math.max(0, Math.min(1, (m - VT_MIN) / (VT_MAX - VT_MIN
 $('#vt-ticks').innerHTML = [48, 60, 72].map((m) => `<span style="left:${vtPos(m)}"><i></i><b data-midi="${m}"></b></span>`).join('');
 
 /** Abre la prueba de voz; devuelve true si se guarda un rango nuevo. */
-function runVoiceTest() {
+function runVoiceTest({ beforeSinging = false } = {}) {
   const d = $('#voice-test');
   let phase = 'intro';
   let stable = []; // notas sostenidas (MIDI) de toda la prueba
@@ -1310,9 +1305,10 @@ function runVoiceTest() {
     $('#vt-share').hidden = true;
     $('#vt-mark').textContent = '';
     if (p === 'intro') {
-      $('#vt-step').textContent = '';
+      $('#vt-step').textContent = beforeSinging ? 'Antes de cantar' : '';
       $('#vt-title').textContent = 'Prueba de voz';
-      $('#vt-text').textContent = 'Canta la nota más grave que puedas y luego la más aguda, sin forzar. Cuando termines, pulsa Aceptar.';
+      $('#vt-text').textContent = (beforeSinging ? 'Solo hace falta una vez, para poner cada canción en tu tono. ' : '')
+        + 'Canta la nota más grave que puedas y luego la más aguda, sin forzar. Cuando termines, pulsa Aceptar.';
       $('#vt-next').textContent = 'Empezar';
       $('#vt-next').disabled = false;
     } else if (p === 'listen') {
@@ -1388,7 +1384,7 @@ function runVoiceTest() {
     $('#vt-result').innerHTML = `
       <div><dt>Tu voz</dt><dd>${noteName(range.low)}–${noteName(range.high)}</dd></div>
       <div><dt>Zona cómoda</dt><dd>${noteName(Math.round(zone.low))}–${noteName(Math.round(zone.high))}</dd></div>`;
-    $('#vt-next').textContent = 'Guardar';
+    $('#vt-next').textContent = beforeSinging ? 'Guardar y cantar' : 'Guardar';
     $('#vt-next').disabled = false;
     $('#vt-share').hidden = false;
     $('#vt-share').onclick = () => shareText(`🎤 He hecho la prueba de voz de PitchCoach: soy ${type.name.toLowerCase()} (${noteName(range.low)}–${noteName(range.high)}). ¿Y tú qué voz tienes?`);
